@@ -99,8 +99,62 @@ def unet_2layerWithoutBatchNormStride2(pretrained_weights = None,input_size = (4
 
 	return model
 
+def EncodingLayer(layer_number,
+				input,
+				kernel_size = 3,
+				number_of_kernels = 8,
+				stride = 1,
+				max_pool = True,
+				max_pool_size = 2,
+				batch_norm = True,
+				dropout = False,
+				dropout_rate = 0.5,
+				residual_connections = False):
+
+	#calculate the number of feature
+	kernels = number_of_kernels * layer_number
+	# shortcut will be input
+	shortcut = input
+	# do not make batch-normalization on the first layer!
+	if batch_norm == True and layer_number != 0:
+		input = BatchNormalization()(input)
+	# Double convolution according to U-Net structure
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(input)
+	# Batch-normalization on demand
+	if batch_norm == True:
+		conv = BatchNormalization()(conv)
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv)
+	# in case we are using residual connection, add shortcut
+	if residual_connections == True:
+		conv = Add()([conv, shortcut])
+	# Dropout on demand
+	if dropout == True:
+		conv = Dropout(dropout_rate)(conv)
+	# Max-pool on demand
+	if max_pool == True:
+		output = MaxPooling2D(pool_size=(max_pool_size, max_pool_size))(conv)
+	else:
+		output = conv
+	return output
+
+def DecodingLayer(layer_number,
+				input,
+				concatInput,
+				kernel_size = 3,
+				number_of_kernels = 8,
+				stride = 1,
+				max_pool = True,
+				max_pool_size = 2,
+				batch_norm = True,
+				dropout = False,
+				dropout_rate = 0.5,
+				residual_connections = False):
+	output = input
+	return output #TODO
+
+
 #UNet with some additional parameters, connection and so on....
-def autoEncoder(pretrained_weights = None,
+def AutoEncoder(pretrained_weights = None,
 				input_size = (512,512),
 				number_of_layers = 2,
 				kernel_size = 3,
@@ -114,28 +168,58 @@ def autoEncoder(pretrained_weights = None,
 				batch_norm_bottleNeck = True,
 				dropout_bottleNeck = True,
 				residual_connections = False):
-
 	# Input
 	inputs = Input(input_size)
-	# Number of feature kernels is equal to feature count passes to function 
-	first_layer_features = number_of_kernels
-	# Double convolution according to U-Net structure
-	conv1 = Conv2D(first_layer_features, kernel_size = (kernel_size, kernel_size), activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
-	# Batch-normalization on demand
-	if batch_norm == True:
-		conv1 = BatchNormalization()(conv1)
-	conv1 = Conv2D(first_layer_features, kernel_size = (kernel_size, kernel_size), activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
-	# Dropout on demand
-	if dropout == True:
-		conv1 = Dropout(dropout_rate)(conv1)
-	# Max-pool on demand
-	if max_pool == True:
-		first_layer = MaxPooling2D(pool_size=(max_pool_size, max_pool_size))(conv1)
-	else:
-		first_layer = conv1
+	# Count layers until bottleneck
+	layers_until_bottleneck = number_of_layers - 1
 
-	
+	# Put every encoding-layer output tensor to list
+	encoding_layer_outputs = []
+	# encoding layer input
+	input = inputs
 
+	# Encoding part
+	for layer_index in range(0, layers_until_bottleneck):
+		#make layer
+		output = EncodingLayer(layer_index,
+						input,
+					   kernel_size,
+					  number_of_kernels,
+					 stride, max_pool,
+					max_pool_size,
+				   batch_norm,
+				  dropout,
+				 dropout_rate,
+				residual_connections)
+		# Put ouput tensor for concatenate operation in decoding part
+		encoding_layer_outputs.append(output)
+		# Reassign output as another layer input
+		input = output
+
+	# Bottleneck
+	output = EncodingLayer(layer_index,
+						input,
+					   kernel_size,
+					  number_of_kernels,
+					 stride, max_pool,
+					max_pool_size,
+				   batch_norm,
+				  dropout,
+				 dropout_rate,
+				residual_connections)
+	# Reassign output as another layer input
+	input = output
+
+	# Decoding part
+	# Amount of layers from bottleneck till output will be same as from input till bottleneck
+	# Index of first decoding layer
+	decoding_layer_start = number_of_layers
+
+	for decoding_layer_index in range(decoding_layer_start, decoding_layer_start + number_of_layers):
+		# TODO
+		
+		
+		
 
 	# Load trained weights if they are passed here
 	if (pretrained_weights):
