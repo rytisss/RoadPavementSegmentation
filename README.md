@@ -1,0 +1,2 @@
+# RoadPavementSegmentation
+Repository for all the stuff related with road pavements defect segmentation. Main idea behind the segmentation is to create/approve/test various architectures (modification of autoencoders, such as U-Net) to find the best to do the task. Third-party library priorities: Tensorflow (with Keras frontend), OpenCV and many nifty things related to Python programming language.
