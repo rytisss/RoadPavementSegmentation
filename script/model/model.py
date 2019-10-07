@@ -113,20 +113,22 @@ def EncodingLayer(layer_number,
 
 	#calculate the number of feature
 	kernels = number_of_kernels * layer_number
-	# shortcut will be input
-	shortcut = input
+	# calculate how many times
+	downscale = stride
+	if max_pool == True:
+		downscale *= max_pool_size
+	# adjust shortcut to be same size as input by downscaling with average
+	shortcut = MeanPooling2D(pool_size=(downscale, downscale))(input)
+	shortcut = Conv2D(kernels, kernel_size = (1, 1), stride = 1, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(input)
 	# do not make batch-normalization on the first layer!
 	if batch_norm == True and layer_number != 0:
 		input = BatchNormalization()(input)
 	# Double convolution according to U-Net structure
-	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(input)
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), stride = stride, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(input)
 	# Batch-normalization on demand
 	if batch_norm == True:
 		conv = BatchNormalization()(conv)
-	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv)
-	# in case we are using residual connection, add shortcut
-	if residual_connections == True:
-		conv = Add()([conv, shortcut])
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), stride = 1, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv)
 	# Dropout on demand
 	if dropout == True:
 		conv = Dropout(dropout_rate)(conv)
@@ -135,6 +137,10 @@ def EncodingLayer(layer_number,
 		output = MaxPooling2D(pool_size=(max_pool_size, max_pool_size))(conv)
 	else:
 		output = conv
+	# in case we are using residual connection, add shortcut
+	if residual_connections == True:
+		conv = Add()([conv, shortcut])
+
 	return output
 
 def DecodingLayer(layer_number,
@@ -151,7 +157,6 @@ def DecodingLayer(layer_number,
 				residual_connections = False):
 	output = input
 	return output #TODO
-
 
 #UNet with some additional parameters, connection and so on....
 def AutoEncoder(pretrained_weights = None,
