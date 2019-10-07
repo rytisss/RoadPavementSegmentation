@@ -119,15 +119,20 @@ def EncodingLayer(layer_number,
 		downscale *= max_pool_size
 	# adjust shortcut to be same size as input by downscaling with average
 	shortcut = MeanPooling2D(pool_size=(downscale, downscale))(input)
-	shortcut = Conv2D(kernels, kernel_size = (1, 1), stride = 1, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(input)
+	shortcut = Conv2D(kernels, kernel_size = (1, 1), stride = 1, padding = 'same', kernel_initializer = 'he_normal')(input)
+	shortcut = Activation('relu')(shortcut)
 	# do not make batch-normalization on the first layer!
 	if batch_norm == True and layer_number != 0:
 		input = BatchNormalization()(input)
+	# do not activate in first layer
+	if layer_number != 0:
+		input = Activation('relu')(input)
 	# Double convolution according to U-Net structure
-	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), stride = stride, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(input)
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), stride = stride, padding = 'same', kernel_initializer = 'he_normal')(input)
 	# Batch-normalization on demand
 	if batch_norm == True:
 		conv = BatchNormalization()(conv)
+	conv = Activation('relu')(conv)
 	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), stride = 1, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv)
 	# Dropout on demand
 	if dropout == True:
