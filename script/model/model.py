@@ -172,8 +172,44 @@ def DecodingLayer(input,
 	output = conv
 	return output
 
-#UNet with some additional parameters, connection and so on....
-def AutoEncoder4(pretrained_weights = None,
+#5-layer UNet with residual connection
+def AutoEncoderRes5(pretrained_weights = None,
+				input_size = (512,512,1),
+				number_of_layers = 2,
+				kernel_size = 3,
+				number_of_kernels = 8,
+				stride = 1,
+				max_pool = True,
+				max_pool_size = 2,
+				batch_norm = True,
+				batch_norm_bottleNeck = True,
+				residual_connections = False):
+	# Input
+	inputs = Input(input_size)
+	#encoding
+	enc0 = EncodingLayer(inputs, kernel_size, number_of_kernels, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections, isInput = True)
+	enc1 = EncodingLayer(enc0, kernel_size, number_of_kernels * 2, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
+	enc2 = EncodingLayer(enc1, kernel_size, number_of_kernels * 4, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
+	enc3 = EncodingLayer(enc2, kernel_size, number_of_kernels * 8, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
+	#bottleneck without residual (might be without batch-norm)
+	enc4 = EncodingLayer(enc3, kernel_size, number_of_kernels * 16, stride, max_pool, max_pool_size, batch_norm, residual_connections = False)
+	#decoding
+	#Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
+	dec3 = DecodingLayer(enc4, enc3, 2, kernel_size, number_of_kernels * 8, batch_norm, residual_connections = residual_connections)
+	dec2 = DecodingLayer(dec3, enc2, 2, kernel_size, number_of_kernels * 4, batch_norm, residual_connections = residual_connections)
+	dec1 = DecodingLayer(dec2, enc1, 2, kernel_size, number_of_kernels * 2, batch_norm, residual_connections = residual_connections)
+	dec0 = DecodingLayer(dec1, enc0, 2, kernel_size, number_of_kernels, batch_norm, residual_connections = residual_connections)
+
+	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid")(dec0)
+	model = Model(inputs, outputs)
+	# Load trained weights if they are passed here
+	if (pretrained_weights):
+		model.load_weights(pretrained_weights)
+	plot_model(model, to_file='AutoEncoderRes5.png', show_shapes=True, show_layer_names=True)
+	return model
+
+#5-layer UNet without residual connection
+def AutoEncoder5(pretrained_weights = None,
 				input_size = (512,512,1),
 				number_of_layers = 2,
 				kernel_size = 3,
@@ -187,23 +223,23 @@ def AutoEncoder4(pretrained_weights = None,
 	# Input
 	inputs = Input(input_size)
 	#encoding
-	enc0 = EncodingLayer(inputs, kernel_size, number_of_kernels, stride, max_pool, max_pool_size, batch_norm, residual_connections = True, isInput = True)
-	enc1 = EncodingLayer(enc0, kernel_size, number_of_kernels * 2, stride, max_pool, max_pool_size, batch_norm, residual_connections = True)
-	enc2 = EncodingLayer(enc1, kernel_size, number_of_kernels * 4, stride, max_pool, max_pool_size, batch_norm, residual_connections = True)
-	enc3 = EncodingLayer(enc2, kernel_size, number_of_kernels * 8, stride, max_pool, max_pool_size, batch_norm, residual_connections = True)
+	enc0 = EncodingLayer(inputs, kernel_size, number_of_kernels, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections, isInput = True)
+	enc1 = EncodingLayer(enc0, kernel_size, number_of_kernels * 2, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
+	enc2 = EncodingLayer(enc1, kernel_size, number_of_kernels * 4, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
+	enc3 = EncodingLayer(enc2, kernel_size, number_of_kernels * 8, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
 	#bottleneck without residual (might be without batch-norm)
 	enc4 = EncodingLayer(enc3, kernel_size, number_of_kernels * 16, stride, max_pool, max_pool_size, batch_norm, residual_connections = False)
 	#decoding
 	#Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-	dec3 = DecodingLayer(enc4, enc3, 2, kernel_size, number_of_kernels * 8, batch_norm, residual_connections = True)
-	dec2 = DecodingLayer(dec3, enc2, 2, kernel_size, number_of_kernels * 4, batch_norm, residual_connections = True)
-	dec1 = DecodingLayer(dec2, enc1, 2, kernel_size, number_of_kernels * 2, batch_norm, residual_connections = True)
-	dec0 = DecodingLayer(dec1, enc0, 2, kernel_size, number_of_kernels, batch_norm, residual_connections = True)
+	dec3 = DecodingLayer(enc4, enc3, 2, kernel_size, number_of_kernels * 8, batch_norm, residual_connections = residual_connections)
+	dec2 = DecodingLayer(dec3, enc2, 2, kernel_size, number_of_kernels * 4, batch_norm, residual_connections = residual_connections)
+	dec1 = DecodingLayer(dec2, enc1, 2, kernel_size, number_of_kernels * 2, batch_norm, residual_connections = residual_connections)
+	dec0 = DecodingLayer(dec1, enc0, 2, kernel_size, number_of_kernels, batch_norm, residual_connections = residual_connections)
 
 	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid")(dec0)
 	model = Model(inputs, outputs)
 	# Load trained weights if they are passed here
 	if (pretrained_weights):
 		model.load_weights(pretrained_weights)
-	plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
+	plot_model(model, to_file='AutoEncoder5.png', show_shapes=True, show_layer_names=True)
 	return model

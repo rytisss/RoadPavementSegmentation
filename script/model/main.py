@@ -41,6 +41,8 @@ for i in range(1,7):
 #saveResult("data/membrane/test",results)
 """
 
-model = AutoEncoder4()
+model = AutoEncoderRes5(residual_connections = True)
+model.summary()
+model = AutoEncoder5(residual_connections = False)
 model.summary()
 i = 4
