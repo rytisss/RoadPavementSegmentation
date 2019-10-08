@@ -99,33 +99,31 @@ def unet_2layerWithoutBatchNormStride2(pretrained_weights = None,input_size = (4
 
 	return model
 
-def EncodingLayer(layer_number,
-				input,
+def EncodingLayer(input,
 				kernel_size = 3,
-				number_of_kernels = 8,
+				kernels = 8,
 				stride = 1,
 				max_pool = True,
 				max_pool_size = 2,
 				batch_norm = True,
-				dropout = False,
-				dropout_rate = 0.5,
-				residual_connections = False):
+				residual_connections = False,
+				isInput = False):
 
-	#calculate the number of feature
-	kernels = number_of_kernels * layer_number
-	# calculate how many times
-	downscale = stride
-	if max_pool == True:
-		downscale *= max_pool_size
-	# adjust shortcut to be same size as input by downscaling with average
-	shortcut = MeanPooling2D(pool_size=(downscale, downscale))(input)
-	shortcut = Conv2D(kernels, kernel_size = (1, 1), stride = 1, padding = 'same', kernel_initializer = 'he_normal')(input)
-	shortcut = Activation('relu')(shortcut)
-	# do not make batch-normalization on the first layer!
-	if batch_norm == True and layer_number != 0:
+	if residual_connections == True:
+		# calculate how many times
+		downscale = stride
+		if max_pool == True:
+			downscale *= max_pool_size
+		# adjust shortcut to be same size as input by downscaling with average
+		shortcut = MeanPooling2D(pool_size=(downscale, downscale))(input) #TODO: Maybe max pool!!!!
+		shortcut = Conv2D(kernels, kernel_size = (1, 1), stride = 1, padding = 'same', kernel_initializer = 'he_normal')(input)
+		if batch_norm == True and isInput == False:
+			shortcut = BatchNormalization()(shortcut)
+	# do not make batch-normalization on the first layer/neural network input, because data here is already normalized!
+	if batch_norm == True and isInput == False:
 		input = BatchNormalization()(input)
 	# do not activate in first layer
-	if layer_number != 0:
+	if isInput == False:
 		input = Activation('relu')(input)
 	# Double convolution according to U-Net structure
 	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), stride = stride, padding = 'same', kernel_initializer = 'he_normal')(input)
@@ -133,10 +131,9 @@ def EncodingLayer(layer_number,
 	if batch_norm == True:
 		conv = BatchNormalization()(conv)
 	conv = Activation('relu')(conv)
-	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), stride = 1, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv)
-	# Dropout on demand
-	if dropout == True:
-		conv = Dropout(dropout_rate)(conv)
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), stride = 1, padding = 'same', kernel_initializer = 'he_normal')(conv)
+	if batch_norm == True:
+		conv = BatchNormalization()(conv)
 	# Max-pool on demand
 	if max_pool == True:
 		output = MaxPooling2D(pool_size=(max_pool_size, max_pool_size))(conv)
@@ -144,27 +141,38 @@ def EncodingLayer(layer_number,
 		output = conv
 	# in case we are using residual connection, add shortcut
 	if residual_connections == True:
-		conv = Add()([conv, shortcut])
-
+		output = Add()([output, shortcut])
+	#in next step this output needs to be activated
 	return output
 
-def DecodingLayer(layer_number,
-				input,
-				concatInput,
+def DecodingLayer(input,
+				skippedInput,
+				upSampleSize = 2,
 				kernel_size = 3,
 				number_of_kernels = 8,
-				stride = 1,
-				max_pool = True,
-				max_pool_size = 2,
 				batch_norm = True,
-				dropout = False,
-				dropout_rate = 0.5,
 				residual_connections = False):
-	output = input
-	return output #TODO
+
+	upsampledInput = UpSampling2D((upSampleSize, upSampleSize))(input)
+	concatenatedInput = Concatenate()([upsampledInput, skippedInput])
+	if residual_connections == True:
+		shortcut = Conv2D(kernels, kernel_size = (1, 1), stride = 1, padding = 'same', kernel_initializer = 'he_normal')(concatenatedInput)
+		if batch_norm == True:
+			shortcut = BatchNormalization()(shortcut)
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), stride = 1, padding = 'same', kernel_initializer = 'he_normal')(concatenatedInput)
+	if batch_norm == True:
+		conv = BatchNormalization()(conv)
+	conv = Activation('relu')(conv)
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), stride = 1, padding = 'same', kernel_initializer = 'he_normal')(concatenatedInput)
+	if batch_norm == True:
+		conv = BatchNormalization()(conv)
+	if residual_connections == True:
+		conv = Add()([conv, shortcut])
+	output = conv
+	return output
 
 #UNet with some additional parameters, connection and so on....
-def AutoEncoder(pretrained_weights = None,
+def AutoEncoder4(pretrained_weights = None,
 				input_size = (512,512),
 				number_of_layers = 2,
 				kernel_size = 3,
@@ -173,68 +181,31 @@ def AutoEncoder(pretrained_weights = None,
 				max_pool = True,
 				max_pool_size = 2,
 				batch_norm = True,
-				dropout = False,
-				dropout_rate = 0.5,
 				batch_norm_bottleNeck = True,
-				dropout_bottleNeck = True,
 				residual_connections = False):
 	# Input
 	inputs = Input(input_size)
-	# Count layers until bottleneck
-	layers_until_bottleneck = number_of_layers - 1
+	#encoding
+	enc0 = EncodingLayer(input, kernel_size, number_of_kernels, stride, max_pool, max_pool_size, batch_norm, residual_connections = True, isInput = True)
+	enc1 = EncodingLayer(enc0, kernel_size, number_of_kernels * 2, stride, max_pool, max_pool_size, batch_norm, residual_connections = True)
+	enc2 = EncodingLayer(enc1, kernel_size, number_of_kernels * 4, stride, max_pool, max_pool_size, batch_norm, residual_connections = True)
+	enc3 = EncodingLayer(enc2, kernel_size, number_of_kernels * 8, stride, max_pool, max_pool_size, batch_norm, residual_connections = True)
+	#bottleneck without residual (might be without batch-norm)
+	enc4 = EncodingLayer(4, enc2, kernel_size, number_of_kernels * 16, stride, max_pool, max_pool_size, batch_norm, residual_connections = False)
+	#decoding
+	#Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
+	dec3 = DecodingLayer(enc4, enc3, 2, kernel_size, number_of_kernels * 8, batch_norm, residual_connections = True)
+	dec2 = DecodingLayer(dec3, enc2, 2, kernel_size, number_of_kernels * 4, batch_norm, residual_connections = True)
+	dec1 = DecodingLayer(dec2, enc1, 2, kernel_size, number_of_kernels * 2, batch_norm, residual_connections = True)
+	dec0 = DecodingLayer(dec1, enc0, 2, kernel_size, number_of_kernels, batch_norm, residual_connections = True)
 
-	# Put every encoding-layer output tensor to list
-	encoding_layer_outputs = []
-	# encoding layer input
-	input = inputs
-
-	# Encoding part
-	for layer_index in range(0, layers_until_bottleneck):
-		#make layer
-		output = EncodingLayer(layer_index,
-						input,
-					   kernel_size,
-					  number_of_kernels,
-					 stride, max_pool,
-					max_pool_size,
-				   batch_norm,
-				  dropout,
-				 dropout_rate,
-				residual_connections)
-		# Put ouput tensor for concatenate operation in decoding part
-		encoding_layer_outputs.append(output)
-		# Reassign output as another layer input
-		input = output
-
-	# Bottleneck
-	output = EncodingLayer(layer_index,
-						input,
-					   kernel_size,
-					  number_of_kernels,
-					 stride, max_pool,
-					max_pool_size,
-				   batch_norm,
-				  dropout,
-				 dropout_rate,
-				residual_connections)
-	# Reassign output as another layer input
-	input = output
-
-	# Decoding part
-	# Amount of layers from bottleneck till output will be same as from input till bottleneck
-	# Index of first decoding layer
-	decoding_layer_start = number_of_layers
-
-	for decoding_layer_index in range(decoding_layer_start, decoding_layer_start + number_of_layers):
-		# TODO
-		
-		
-		
+	outputs = keras.layers.Conv2D(1, (1, 1), padding="same", activation="sigmoid")(dec0)
+    model = keras.models.Model(inputs, outputs)
 
 	# Load trained weights if they are passed here
 	if (pretrained_weights):
 		model.load_weights(pretrained_weights)
 
-	#plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
+	plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
 
 	return model
