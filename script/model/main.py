@@ -1,5 +1,4 @@
 from model import *
-from data import *
 import time
 
 """
@@ -42,4 +41,6 @@ for i in range(1,7):
 #saveResult("data/membrane/test",results)
 """
 
-model = unet_2layerWithoutBatchNormStride2()
+model = AutoEncoder4()
+model.summary()
+i = 4
