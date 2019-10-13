@@ -1,13 +1,30 @@
 from model import *
+import glob
 import time
-from keras.preprocessing.image import ImageDataGenerator
+import keras
 import numpy as np 
 import os
 import glob
 import skimage.io as io
 import skimage.transform as trans
+from keras.preprocessing.image import ImageDataGenerator
+import cv2
 
-#make iteration throught every class data
+Sky = [128,128,128]
+Building = [128,0,0]
+Pole = [192,192,128]
+Road = [128,64,128]
+Pavement = [60,40,222]
+Tree = [128,128,0]
+SignSymbol = [192,128,128]
+Fence = [64,64,128]
+Car = [64,0,128]
+Pedestrian = [64,64,0]
+Bicyclist = [0,128,192]
+Unlabelled = [0,0,0]
+
+COLOR_DICT = np.array([Sky, Building, Pole, Road, Pavement,
+                          Tree, SignSymbol, Fence, Car, Pedestrian, Bicyclist, Unlabelled])
 
 def adjustData(img,mask,flag_multi_class,num_class):
     if(flag_multi_class):
@@ -66,6 +83,30 @@ def trainGenerator(batch_size,train_path,image_folder,mask_folder,aug_dict,image
         img,mask = adjustData(img,mask,flag_multi_class,num_class)
         yield (img,mask)
 
+def saveResult(save_path,npyfile,flag_multi_class = False,num_class = 2):
+    for i,item in enumerate(npyfile):
+        img = labelVisualize(num_class,COLOR_DICT,item) if flag_multi_class else item[:,:,0]
+        io.imsave(os.path.join(save_path,"%d_predict.bmp"%i),img)
+        #cv2.imwrite(os.path.join(save_path,"%d_predict.bmp"%i),img)
+
+
+def labelVisualize(num_class,color_dict,img):
+    img = img[:,:,0] if len(img.shape) == 3 else img
+    img_out = np.zeros(img.shape + (3,))
+    for i in range(num_class):
+        img_out[img == i,:] = color_dict[i]
+    return img_out / 255
+
+def testGenerator(test_path,num_image = 30,target_size = (320,480),flag_multi_class = False,as_gray = True):
+    inputImageList = glob.glob(test_path + '*.bmp')
+    for i in inputImageList:
+        img = io.imread(i,as_gray = as_gray)
+        img = img / 255
+        img = trans.resize(img,target_size)
+        img = np.reshape(img,img.shape+(1,)) if (not flag_multi_class) else img
+        img = np.reshape(img,(1,)+img.shape)
+        yield img
+
 data_gen_args = dict(rotation_range=0.0,
                     width_shift_range=0.00,
                     height_shift_range=0.00,
@@ -74,26 +115,22 @@ data_gen_args = dict(rotation_range=0.0,
                     horizontal_flip=False,
                     fill_mode='nearest')
 
-outputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/5_16/'
-
-generator = trainGenerator(2,'C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Train/','Images','Labels',data_gen_args,save_to_dir = None)
-
-model = AutoEncoder5(residual_connections = False)
-outputPath = outputDir + "AutoEncoder5-{epoch:03d}-{loss:.4f}.hdf5"
-model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False)
-model.fit_generator(generator,steps_per_epoch=44,epochs=200,callbacks=[model_checkpoint])
-
-print('Sleep for 300s !')
-time.sleep(300)
-
-#testGene = testGenerator("data/membrane/test")
-#results = model.predict_generator(testGene,30,verbose=1)
-#saveResult("data/membrane/test",results)
-"""
-
-model = AutoEncoderRes5(residual_connections = True)
-model.summary()
-model = AutoEncoder5(residual_connections = False)
-model.summary()
-i = 4
-"""
+inputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/5_16/'
+weightList = glob.glob(inputDir + '*.hdf5')
+counter = 0
+for weightPath in weightList:
+    print('Opening: ' + weightPath)
+    fileNameWithExt = weightPath.rsplit('\\', 1)[1]
+    fileName, extension = os.path.splitext(fileNameWithExt)
+    model = AutoEncoder5(residual_connections = False, pretrained_weights = weightPath)
+    testGene = testGenerator('C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Test/Images/')
+    results = model.predict_generator(testGene,29,verbose=1)
+            
+    predictionOutputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/5_16/prediction/' + str(counter) + '/'
+    if not os.path.exists(predictionOutputDir):
+        os.makedirs(predictionOutputDir)
+    saveResult(predictionOutputDir,results)
+    counter+=1
+    keras.backend.clear_session()
+    print('Sleep for 5s !')
+    time.sleep(5)

@@ -176,7 +176,7 @@ def DecodingLayer(input,
 
 #5-layer UNet with residual connection
 def AutoEncoderRes5(pretrained_weights = None,
-				input_size = (480,320,1),
+				input_size = (320,480,1),
 				number_of_layers = 2,
 				kernel_size = 3,
 				number_of_kernels = 16,
@@ -213,7 +213,7 @@ def AutoEncoderRes5(pretrained_weights = None,
 
 #5-layer UNet without residual connection
 def AutoEncoder5(pretrained_weights = None,
-				input_size = (480,320,1),
+				input_size = (320,480,1),
 				number_of_layers = 2,
 				kernel_size = 3,
 				number_of_kernels = 8,
@@ -222,7 +222,7 @@ def AutoEncoder5(pretrained_weights = None,
 				max_pool_size = 2,
 				batch_norm = True,
 				batch_norm_bottleNeck = True,
-				residual_connections = True):
+				residual_connections = False):
 	# Input
 	inputs = Input(input_size)
 	#encoding

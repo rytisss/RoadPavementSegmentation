@@ -23,7 +23,7 @@ for classNr in range(1,7):
     inputTrainImageList = glob.glob(inputDir + '*.PNG')
 
     #Augmentation
-    rotationAngleList = [0, 90, 180, 270]
+    rotationAngleList = [0, 180]
     for imagePath in inputTrainImageList:
         fileNameWithExt = imagePath.rsplit('\\', 1)[1]
         fileName, extension = os.path.splitext(fileNameWithExt)
