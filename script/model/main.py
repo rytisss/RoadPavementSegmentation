@@ -78,8 +78,8 @@ outputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/res5_16/'
 
 generator = trainGenerator(2,'C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Train/','Images','Labels',data_gen_args,save_to_dir = None)
 
-model = AutoEncoderRes5(residual_connections = True)
-outputPath = "AutoEncoderRes5-{epoch:03d}-{loss:.4f}.hdf5"
+model = AutoEncoder5(residual_connections = True)
+outputPath = outputDir + "AutoEncoder5-{epoch:03d}-{loss:.4f}.hdf5"
 model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False)
 model.fit_generator(generator,steps_per_epoch=44,epochs=200,callbacks=[model_checkpoint])
 

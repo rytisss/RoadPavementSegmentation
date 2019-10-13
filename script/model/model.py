@@ -216,7 +216,7 @@ def AutoEncoderRes5(pretrained_weights = None,
 
 #5-layer UNet without residual connection
 def AutoEncoder5(pretrained_weights = None,
-				input_size = (512,512,1),
+				input_size = (480,320,1),
 				number_of_layers = 2,
 				kernel_size = 3,
 				number_of_kernels = 8,
