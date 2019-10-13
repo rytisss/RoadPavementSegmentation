@@ -115,7 +115,11 @@ def EncodingLayer(input,
 		if max_pool == True:
 			downscale *= max_pool_size
 		# adjust shortcut to be same size as input by downscaling with average
-		shortcut = MaxPooling2D(pool_size=(downscale, downscale))(input) #TODO: Maybe max pool!!!!
+		if max_pool == True:
+			if isInput == True:
+				shortcut = AveragePooling2D(pool_size=(downscale, downscale))(input) 
+			else:
+				shortcut = MaxPooling2D(pool_size=(downscale, downscale))(input) 
 		shortcut = Conv2D(kernels, kernel_size = (1, 1), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(shortcut)
 		#if batch_norm == True and isInput == False:
 		#	shortcut = BatchNormalization()(shortcut)
@@ -152,19 +156,20 @@ def DecodingLayer(input,
 				batch_norm = True,
 				residual_connections = False):
 
-	upsampledInput = UpSampling2D((upSampleSize, upSampleSize))(input)
-	concatenatedInput = Concatenate()([upsampledInput, skippedInput])
+	concatenatedInput = Concatenate()([input, skippedInput])
+	upsampledInput = UpSampling2D((upSampleSize, upSampleSize))(concatenatedInput)
+	
 	if residual_connections == True:
-		shortcut = Conv2D(kernels, kernel_size = (1, 1), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(concatenatedInput)
+		shortcut = Conv2D(kernels, kernel_size = (1, 1), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(upsampledInput)
 		#if batch_norm == True:
 		#	shortcut = BatchNormalization()(shortcut)
 	if batch_norm == True:
-		concatenatedInput = BatchNormalization()(concatenatedInput)
-	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(concatenatedInput)
+		upsampledInput = BatchNormalization()(upsampledInput)
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(upsampledInput)
 	if batch_norm == True:
 		conv = BatchNormalization()(conv)
 	conv = Activation('relu')(conv)
-	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(concatenatedInput)
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(upsampledInput)
 	if batch_norm == True:
 		conv = BatchNormalization()(conv)
 	if residual_connections == True:
@@ -174,10 +179,10 @@ def DecodingLayer(input,
 
 #5-layer UNet with residual connection
 def AutoEncoderRes5(pretrained_weights = None,
-				input_size = (512,512,1),
+				input_size = (480,320,1),
 				number_of_layers = 2,
 				kernel_size = 3,
-				number_of_kernels = 8,
+				number_of_kernels = 16,
 				stride = 1,
 				max_pool = True,
 				max_pool_size = 2,
@@ -192,7 +197,7 @@ def AutoEncoderRes5(pretrained_weights = None,
 	enc2 = EncodingLayer(enc1, kernel_size, number_of_kernels * 4, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
 	enc3 = EncodingLayer(enc2, kernel_size, number_of_kernels * 8, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
 	#bottleneck without residual (might be without batch-norm)
-	enc4 = EncodingLayer(enc3, kernel_size, number_of_kernels * 16, stride, max_pool, max_pool_size, batch_norm, residual_connections = False)
+	enc4 = EncodingLayer(enc3, kernel_size, number_of_kernels * 16, stride, False, max_pool_size, batch_norm, residual_connections = False)
 	#decoding
 	#Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
 	dec3 = DecodingLayer(enc4, enc3, 2, kernel_size, number_of_kernels * 8, batch_norm, residual_connections = residual_connections)
@@ -202,6 +207,7 @@ def AutoEncoderRes5(pretrained_weights = None,
 
 	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid")(dec0)
 	model = Model(inputs, outputs)
+	model.compile(optimizer = Adam(lr = 1e-4), loss = IOU_calc_loss, metrics = [dice_loss])
 	# Load trained weights if they are passed here
 	if (pretrained_weights):
 		model.load_weights(pretrained_weights)
@@ -228,7 +234,7 @@ def AutoEncoder5(pretrained_weights = None,
 	enc2 = EncodingLayer(enc1, kernel_size, number_of_kernels * 4, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
 	enc3 = EncodingLayer(enc2, kernel_size, number_of_kernels * 8, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
 	#bottleneck without residual (might be without batch-norm)
-	enc4 = EncodingLayer(enc3, kernel_size, number_of_kernels * 16, stride, max_pool, max_pool_size, batch_norm, residual_connections = False)
+	enc4 = EncodingLayer(enc3, kernel_size, number_of_kernels * 16, stride, False, max_pool_size, batch_norm, residual_connections = False)
 	#decoding
 	#Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
 	dec3 = DecodingLayer(enc4, enc3, 2, kernel_size, number_of_kernels * 8, batch_norm, residual_connections = residual_connections)
@@ -238,6 +244,7 @@ def AutoEncoder5(pretrained_weights = None,
 
 	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid")(dec0)
 	model = Model(inputs, outputs)
+	model.compile(optimizer = Adam(lr = 1e-4), loss = IOU_calc_loss, metrics = [dice_loss])
 	# Load trained weights if they are passed here
 	if (pretrained_weights):
 		model.load_weights(pretrained_weights)
