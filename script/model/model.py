@@ -114,13 +114,9 @@ def EncodingLayer(input,
 		downscale = stride
 		if max_pool == True:
 			downscale *= max_pool_size
-		shortcut = Conv2D(kernels, kernel_size = (1, 1), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(shortcut)
-		# adjust shortcut to be same size as input by downscaling with average
+		shortcut = Conv2D(kernels, kernel_size = (1, 1), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(input)
 		if max_pool == True:
-			if isInput == True:
-				shortcut = AveragePooling2D(pool_size=(downscale, downscale))(input) 
-			else:
-				shortcut = MaxPooling2D(pool_size=(downscale, downscale))(input) 
+			shortcut = MaxPooling2D(pool_size=(downscale, downscale))(shortcut) 
 		
 		#if batch_norm == True and isInput == False:
 		#	shortcut = BatchNormalization()(shortcut)
