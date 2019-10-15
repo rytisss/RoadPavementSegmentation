@@ -204,7 +204,8 @@ def AutoEncoderRes5(pretrained_weights = None,
 
 	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid")(dec0)
 	model = Model(inputs, outputs)
-	model.compile(optimizer = Adam(lr = 1e-4), loss = IOU_calc_loss, metrics = [dice_loss])
+	#model.compile(optimizer = Adam(lr = 1e-4), loss = IOU_calc_loss, metrics = [dice_loss])
+	model.compile(optimizer = Adam(lr = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
 	# Load trained weights if they are passed here
 	if (pretrained_weights):
 		model.load_weights(pretrained_weights)
@@ -216,7 +217,7 @@ def AutoEncoder5(pretrained_weights = None,
 				input_size = (320,480,1),
 				number_of_layers = 2,
 				kernel_size = 3,
-				number_of_kernels = 8,
+				number_of_kernels = 16,
 				stride = 1,
 				max_pool = True,
 				max_pool_size = 2,
@@ -241,7 +242,8 @@ def AutoEncoder5(pretrained_weights = None,
 
 	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid")(dec0)
 	model = Model(inputs, outputs)
-	model.compile(optimizer = Adam(lr = 1e-4), loss = IOU_calc_loss, metrics = [dice_loss])
+	#model.compile(optimizer = Adam(lr = 1e-4), loss = IOU_calc_loss, metrics = [dice_loss])
+	model.compile(optimizer = Adam(lr = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
 	# Load trained weights if they are passed here
 	if (pretrained_weights):
 		model.load_weights(pretrained_weights)

@@ -74,14 +74,14 @@ data_gen_args = dict(rotation_range=0.0,
                     horizontal_flip=False,
                     fill_mode='nearest')
 
-outputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/5_16/'
+outputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/res5_16_cross/'
 
-generator = trainGenerator(2,'C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Train/','Images','Labels',data_gen_args,save_to_dir = None)
+generator = trainGenerator(2,'C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Train/Augm/','Images','Labels',data_gen_args,save_to_dir = None)
 
-model = AutoEncoder5(residual_connections = False)
-outputPath = outputDir + "AutoEncoder5-{epoch:03d}-{loss:.4f}.hdf5"
+model = AutoEncoderRes5(residual_connections = True)
+outputPath = outputDir + "AutoEncoderRes5Cross-{epoch:03d}-{loss:.4f}.hdf5"
 model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False)
-model.fit_generator(generator,steps_per_epoch=44,epochs=200,callbacks=[model_checkpoint])
+model.fit_generator(generator,steps_per_epoch=176,epochs=200,callbacks=[model_checkpoint])
 
 print('Sleep for 300s !')
 time.sleep(300)

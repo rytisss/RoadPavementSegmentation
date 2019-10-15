@@ -86,8 +86,10 @@ def trainGenerator(batch_size,train_path,image_folder,mask_folder,aug_dict,image
 def saveResult(save_path,npyfile,flag_multi_class = False,num_class = 2):
     for i,item in enumerate(npyfile):
         img = labelVisualize(num_class,COLOR_DICT,item) if flag_multi_class else item[:,:,0]
-        io.imsave(os.path.join(save_path,"%d_predict.bmp"%i),img)
-        #cv2.imwrite(os.path.join(save_path,"%d_predict.bmp"%i),img)
+        img *= 255.0
+        img = img.astype(np.uint8)
+        #io.imsave(os.path.join(save_path,"%d_predict.bmp"%i),img)
+        cv2.imwrite(os.path.join(save_path,"%d_predict.bmp"%i),img)
 
 
 def labelVisualize(num_class,color_dict,img):
@@ -115,7 +117,7 @@ data_gen_args = dict(rotation_range=0.0,
                     horizontal_flip=False,
                     fill_mode='nearest')
 
-inputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/5_16/'
+inputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/5_16_cross/'
 weightList = glob.glob(inputDir + '*.hdf5')
 counter = 0
 for weightPath in weightList:
@@ -126,11 +128,11 @@ for weightPath in weightList:
     testGene = testGenerator('C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Test/Images/')
     results = model.predict_generator(testGene,29,verbose=1)
             
-    predictionOutputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/5_16/prediction/' + str(counter) + '/'
+    predictionOutputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/5_16_cross/prediction/' + str(counter) + '/'
     if not os.path.exists(predictionOutputDir):
         os.makedirs(predictionOutputDir)
     saveResult(predictionOutputDir,results)
     counter+=1
     keras.backend.clear_session()
-    print('Sleep for 5s !')
-    time.sleep(5)
+    #print('Sleep for 5s !')
+    #time.sleep(5)
