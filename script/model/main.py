@@ -81,7 +81,7 @@ generator = trainGenerator(2,'C:/Users/DeepLearningRig/Desktop/crackForestDatase
 model = AutoEncoderRes5(residual_connections = True)
 outputPath = outputDir + "AutoEncoderRes5Cross-{epoch:03d}-{loss:.4f}.hdf5"
 model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False)
-model.fit_generator(generator,steps_per_epoch=176,epochs=200,callbacks=[model_checkpoint])
+model.fit_generator(generator,steps_per_epoch=176,epochs=50,callbacks=[model_checkpoint])
 
 print('Sleep for 300s !')
 time.sleep(300)

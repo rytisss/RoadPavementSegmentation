@@ -117,7 +117,7 @@ data_gen_args = dict(rotation_range=0.0,
                     horizontal_flip=False,
                     fill_mode='nearest')
 
-inputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/5_16_cross/'
+inputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/5_16_dice/'
 weightList = glob.glob(inputDir + '*.hdf5')
 counter = 0
 for weightPath in weightList:
@@ -128,7 +128,7 @@ for weightPath in weightList:
     testGene = testGenerator('C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Test/Images/')
     results = model.predict_generator(testGene,29,verbose=1)
             
-    predictionOutputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/5_16_cross/prediction/' + str(counter) + '/'
+    predictionOutputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/5_16_dice/prediction/' + str(counter) + '/'
     if not os.path.exists(predictionOutputDir):
         os.makedirs(predictionOutputDir)
     saveResult(predictionOutputDir,results)
