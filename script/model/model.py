@@ -3,6 +3,7 @@ import os
 #import skimage.io as io
 #import skimage.transform as trans
 import numpy as np
+from enum import Enum
 from keras.models import *
 from keras.layers import *
 from keras.optimizers import *
@@ -10,6 +11,11 @@ from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras import backend as keras
 
 from keras.utils.vis_utils import plot_model
+
+
+class Loss(Enum):
+	CROSSENTROPY = 0,
+	DICE = 1
 
 def dice_loss(y_true, y_pred):
 	smooth = 1e-6
@@ -120,8 +126,6 @@ def EncodingLayer(input,
 		conv = BatchNormalization()(conv)
 	conv = Activation('relu')(conv)
 	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(conv)
-	if batch_norm == True:
-		conv = BatchNormalization()(conv)
 	# Max-pool on demand
 	if max_pool == True:
 		oppositeConnection = conv
@@ -130,10 +134,9 @@ def EncodingLayer(input,
 		oppositeConnection = conv
 		output = conv
 	#in next step this output needs to be activated
-	output = conv
 	return oppositeConnection, output
 
-
+"""
 def EncodingLayer(input,
 				kernel_size = 3,
 				kernels = 8,
@@ -181,25 +184,26 @@ def EncodingLayer(input,
 def DecodingLayer(input,
 				skippedInput,
 				upSampleSize = 2,
-				kernel_size = 3,
 				kernels = 8,
+				kernel_size = 3,
 				batch_norm = True):
-	
-	upsampledInput = UpSampling2D((upSampleSize, upSampleSize))(input)
-	concatenatedInput = Concatenate()([upsampledInput, skippedInput])
+	if batch_norm == True:
+		input = BatchNormalization()(input)
+	conv = Activation('relu')(input)
+	conv = Conv2D(kernels, kernel_size = (2, 2), padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D((upSampleSize, upSampleSize))(conv))
+	concatenatedInput = Concatenate()([conv, skippedInput])
 	if batch_norm == True:
 		concatenatedInput = BatchNormalization()(concatenatedInput)
+	concatenatedInput = Activation('relu')(concatenatedInput)
 	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(concatenatedInput)
 	if batch_norm == True:
 		conv = BatchNormalization()(conv)
 	conv = Activation('relu')(conv)
 	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(conv)
-	if batch_norm == True:
-		conv = BatchNormalization()(conv)
 	output = conv
 	return output
-	"""
-
+	
+"""
 def DecodingLayer(input,
 				skippedInput,
 				upSampleSize = 2,
@@ -228,77 +232,48 @@ def DecodingLayer(input,
 		conv = Add()([conv, shortcut])
 	output = conv
 	return output
+"""
 
 #5-layer UNet with residual connection
-def AutoEncoderRes5(pretrained_weights = None,
-				input_size = (320,480,1),
-				number_of_layers = 2,
-				kernel_size = 3,
-				number_of_kernels = 16,
-				stride = 1,
-				max_pool = True,
-				max_pool_size = 2,
-				batch_norm = True,
-				batch_norm_bottleNeck = True,
-				residual_connections = False):
-	# Input
-	inputs = Input(input_size)
-	#encoding
-	enc0 = EncodingLayer(inputs, kernel_size, number_of_kernels, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections, isInput = True)
-	enc1 = EncodingLayer(enc0, kernel_size, number_of_kernels * 2, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
-	enc2 = EncodingLayer(enc1, kernel_size, number_of_kernels * 4, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
-	enc3 = EncodingLayer(enc2, kernel_size, number_of_kernels * 8, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
-	#bottleneck without residual (might be without batch-norm)
-	enc4 = EncodingLayer(enc3, kernel_size, number_of_kernels * 16, stride, False, max_pool_size, batch_norm, residual_connections = False)
-	#decoding
-	#Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-	dec3 = DecodingLayer(enc4, enc3, 2, kernel_size, number_of_kernels * 8, batch_norm, residual_connections = residual_connections)
-	dec2 = DecodingLayer(dec3, enc2, 2, kernel_size, number_of_kernels * 4, batch_norm, residual_connections = residual_connections)
-	dec1 = DecodingLayer(dec2, enc1, 2, kernel_size, number_of_kernels * 2, batch_norm, residual_connections = residual_connections)
-	dec0 = DecodingLayer(dec1, enc0, 2, kernel_size, number_of_kernels, batch_norm, residual_connections = residual_connections)
-
-	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid")(dec0)
-	model = Model(inputs, outputs)
-	#model.compile(optimizer = Adam(lr = 1e-4), loss = IOU_calc_loss, metrics = [dice_loss])
-	model.compile(optimizer = Adam(lr = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
-	# Load trained weights if they are passed here
-	if (pretrained_weights):
-		model.load_weights(pretrained_weights)
-	plot_model(model, to_file='AutoEncoderRes5.png', show_shapes=True, show_layer_names=True)
-	return model
-
-#5-layer UNet without residual connection
 def AutoEncoder5(pretrained_weights = None,
 				input_size = (320,480,1),
-				number_of_layers = 2,
 				kernel_size = 3,
 				number_of_kernels = 16,
 				stride = 1,
 				max_pool = True,
 				max_pool_size = 2,
 				batch_norm = True,
-				batch_norm_bottleNeck = True,
-				residual_connections = False):
+				loss_function = Loss.CROSSENTROPY):
 	# Input
 	inputs = Input(input_size)
 	#encoding
-	enc0 = EncodingLayer(inputs, kernel_size, number_of_kernels, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections, isInput = True)
-	enc1 = EncodingLayer(enc0, kernel_size, number_of_kernels * 2, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
-	enc2 = EncodingLayer(enc1, kernel_size, number_of_kernels * 4, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
-	enc3 = EncodingLayer(enc2, kernel_size, number_of_kernels * 8, stride, max_pool, max_pool_size, batch_norm, residual_connections = residual_connections)
+	oppositeEnc0, enc0 = EncodingLayer(inputs, number_of_kernels, kernel_size,  stride, max_pool, max_pool_size, batch_norm, isInput = True)
+	oppositeEnc1, enc1 = EncodingLayer(enc0, number_of_kernels * 2, kernel_size, stride, max_pool, max_pool_size, batch_norm)
+	oppositeEnc2, enc2 = EncodingLayer(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size, batch_norm)
+	oppositeEnc3, enc3 = EncodingLayer(enc2, number_of_kernels * 8, kernel_size, stride, max_pool, max_pool_size, batch_norm)
 	#bottleneck without residual (might be without batch-norm)
-	enc4 = EncodingLayer(enc3, kernel_size, number_of_kernels * 16, stride, False, max_pool_size, batch_norm, residual_connections = False)
+	#opposite connection is equal to enc4
+	oppositeEnc4, enc4 = EncodingLayer(enc3, number_of_kernels * 16, kernel_size, stride, False, max_pool_size, batch_norm)
 	#decoding
 	#Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-	dec3 = DecodingLayer(enc4, enc3, 2, kernel_size, number_of_kernels * 8, batch_norm, residual_connections = residual_connections)
-	dec2 = DecodingLayer(dec3, enc2, 2, kernel_size, number_of_kernels * 4, batch_norm, residual_connections = residual_connections)
-	dec1 = DecodingLayer(dec2, enc1, 2, kernel_size, number_of_kernels * 2, batch_norm, residual_connections = residual_connections)
-	dec0 = DecodingLayer(dec1, enc0, 2, kernel_size, number_of_kernels, batch_norm, residual_connections = residual_connections)
-
+	dec3 = DecodingLayer(enc4, oppositeEnc3, 2, number_of_kernels * 8, kernel_size, batch_norm)
+	dec2 = DecodingLayer(dec3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size,  batch_norm)
+	dec1 = DecodingLayer(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm)
+	dec0 = DecodingLayer(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size,  batch_norm)
+	#
+	if batch_norm == True:
+		dec0 = BatchNormalization()(dec0)
+	dec0 = Activation('relu')(dec0)
+	dec0 = Conv2D(2, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(dec0)
+	if batch_norm == True:
+		dec0 = BatchNormalization()(dec0)
+	dec0 = Activation('relu')(dec0)
 	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid")(dec0)
 	model = Model(inputs, outputs)
-	#model.compile(optimizer = Adam(lr = 1e-4), loss = IOU_calc_loss, metrics = [dice_loss])
-	model.compile(optimizer = Adam(lr = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
+	if (loss_function == Loss.DICE):
+		model.compile(optimizer = Adam(lr = 1e-4), loss = IOU_calc_loss, metrics = [dice_loss])
+	elif (loss_function == Loss.CROSSENTROPY):
+		model.compile(optimizer = Adam(lr = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
 	# Load trained weights if they are passed here
 	if (pretrained_weights):
 		model.load_weights(pretrained_weights)

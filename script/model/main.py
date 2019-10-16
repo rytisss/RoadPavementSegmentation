@@ -74,26 +74,15 @@ data_gen_args = dict(rotation_range=0.0,
                     horizontal_flip=False,
                     fill_mode='nearest')
 
-outputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/res5_16_cross/'
+outputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput_new/5_16_cross/'
+if not os.path.exists(outputDir):
+    print('Output directory doesnt exist!\n')
+    print('It will be created!\n')
+    os.makedirs(outputDir)
 
 generator = trainGenerator(2,'C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Train/Augm/','Images','Labels',data_gen_args,save_to_dir = None)
 
-model = AutoEncoderRes5(residual_connections = True)
-outputPath = outputDir + "AutoEncoderRes5Cross-{epoch:03d}-{loss:.4f}.hdf5"
+model = AutoEncoder5(loss_function = Loss.CROSSENTROPY)
+outputPath = outputDir + "AutoEncoder5Cross-{epoch:03d}-{loss:.4f}.hdf5"
 model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False)
 model.fit_generator(generator,steps_per_epoch=176,epochs=50,callbacks=[model_checkpoint])
-
-print('Sleep for 300s !')
-time.sleep(300)
-
-#testGene = testGenerator("data/membrane/test")
-#results = model.predict_generator(testGene,30,verbose=1)
-#saveResult("data/membrane/test",results)
-"""
-
-model = AutoEncoderRes5(residual_connections = True)
-model.summary()
-model = AutoEncoder5(residual_connections = False)
-model.summary()
-i = 4
-"""
