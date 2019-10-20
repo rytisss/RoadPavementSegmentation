@@ -117,18 +117,19 @@ data_gen_args = dict(rotation_range=0.0,
                     horizontal_flip=False,
                     fill_mode='nearest')
 
-inputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/5_16_dice/'
+configName = 'l5k16Cross_1'
+inputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput_new/'+configName+'/'
 weightList = glob.glob(inputDir + '*.hdf5')
 counter = 0
 for weightPath in weightList:
     print('Opening: ' + weightPath)
     fileNameWithExt = weightPath.rsplit('\\', 1)[1]
     fileName, extension = os.path.splitext(fileNameWithExt)
-    model = AutoEncoder5(residual_connections = False, pretrained_weights = weightPath)
+    model = AutoEncoder5(pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
     testGene = testGenerator('C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Test/Images/')
     results = model.predict_generator(testGene,29,verbose=1)
             
-    predictionOutputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput/5_16_dice/prediction/' + str(counter) + '/'
+    predictionOutputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput_new/'+configName+'/prediction/' + str(counter) + '/'
     if not os.path.exists(predictionOutputDir):
         os.makedirs(predictionOutputDir)
     saveResult(predictionOutputDir,results)
