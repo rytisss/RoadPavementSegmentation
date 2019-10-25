@@ -89,7 +89,7 @@ def saveResult(save_path,npyfile,flag_multi_class = False,num_class = 2):
         img *= 255.0
         img = img.astype(np.uint8)
         #io.imsave(os.path.join(save_path,"%d_predict.bmp"%i),img)
-        cv2.imwrite(os.path.join(save_path,"%d_predict.bmp"%i),img)
+        cv2.imwrite(os.path.join(save_path,"%03d_predict.bmp"%i),img)
 
 
 def labelVisualize(num_class,color_dict,img):
@@ -117,7 +117,9 @@ data_gen_args = dict(rotation_range=0.0,
                     horizontal_flip=False,
                     fill_mode='nearest')
 
-configs = ['l5k16ResAddOPCross', 'l5k16ResAddOPCross_1', 'l5k16ResAddOPCross_2', 'l5k16ResAddOPDice', 'l5k16ResAddOPDice_1', 'l5k16ResAddOPDice_2']
+configs = ['l5k16ResAddOPDice_1',
+  'l5k16ResAddOPDice_2']
+
 for config in configs:
     #configName = 'l5k16Dice_1'
     configName = config

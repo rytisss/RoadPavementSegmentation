@@ -12,5 +12,5 @@ class Render:
         cv2.drawContours(transparentMask, contours, -1, transparentColor, -1)
         imageRGB =  cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
         outputImage = cv2.add(imageRGB, transparentMask)
-        cv2.drawContours(outputImage, contours, -1, outerColor, 2)
+        #cv2.drawContours(outputImage, contours, -1, outerColor, 1)
         return outputImage
