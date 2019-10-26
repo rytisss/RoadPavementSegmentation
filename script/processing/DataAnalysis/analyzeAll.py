@@ -24,11 +24,18 @@ def GetFileName(path):
 def AnalyzeArchitecture():
     #do analysis for every class
     trainings = 'C:/Users/DeepLearningRig/Desktop/trainingOutput_new/'
+    allScores = open(trainings + 'allScores.txt','w')
+
     inputDirs = glob.glob(trainings + '*/')
     for inputDir in inputDirs:
         #Get subdirectories from prediction images
         inputPredictionSubDirs = glob.glob(inputDir + 'prediction/' + '*/')
-
+        averageScore = open(inputDir + 'averageScore' + '.txt','w')
+        configName = os.path.basename(os.path.normpath(inputDir))
+        firstLine = 'TrainingLoss Recall Precision Accuracy F1 IoU Dice' + '\n'
+        averageScore.write(firstLine)
+        allScores.write(firstLine)
+        allScores.write(configName + '\n')
         #Do work in every subdirectory
         for inputPredictionSubDir in inputPredictionSubDirs:
             #epochNumber, trainingDiceLoss = GetCurrentPredictionInfo(inputPredictionSubDir)
@@ -36,10 +43,10 @@ def AnalyzeArchitecture():
             #print('Epoch: ' + str(epochNumber) + ', training set Dice Coef: ' + str(trainingDice))
 
             #file for average score of every epoch
-            averageScore = open(inputPredictionSubDir + 'averageScore' + '.txt','w')
+            
             #first line will be labels of data
-            firstLine = 'Epoch TrainingDice Recall Precision Accuracy F1 IoU Dice' + '\n'
-            averageScore.write(firstLine)
+            
+            
 
             #check if directories exist
             if not os.path.exists(inputPredictionSubDir):
@@ -96,7 +103,7 @@ def AnalyzeArchitecture():
 
                 #render defect on image
                 outerColor = (0,0,200)
-                innerColor = (0,0,60)
+                innerColor = (0,0,80)
                 renderedImage = Render.Defects(image, prediction, outerColor, innerColor)
                         
                 
@@ -127,8 +134,10 @@ def AnalyzeArchitecture():
                 #for line
             averageScoreLine = str(overallRecall) + ' ' + str(overallPrecision) + ' ' + str(overallAccuracy) + ' ' + str(overallF1) + ' ' + str(overallIoU) + ' ' + str(overallDice) + '\n'
             averageScore.write(averageScoreLine)
+            allScores.write(averageScoreLine)
 
-            averageScore.close()
+        averageScore.close()
+    allScores.close()
 
 
 def main():

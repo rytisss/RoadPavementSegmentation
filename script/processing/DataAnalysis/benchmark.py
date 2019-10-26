@@ -21,23 +21,21 @@ class Benchmark:
     str(overallIoU) + ' ' +
      str(overallDice) + '\n'
          """
-    def parseDataLine(self, line):
+    def parseDataLine(self, line, i):
         words = line.split()
-        epochNumber = int(words[0])
-        self.epochNumbersList.append(epochNumber - 1)
-        trainingDice = float(words[1])
-        self.trainingDiceList.append(trainingDice)
-        recall = float(words[2])
+        #epochNumber = int(words[0])
+        self.epochNumbersList.append(i)
+        recall = float(words[0])
         self.recallList.append(recall)
-        precision = float(words[3])
+        precision = float(words[1])
         self.precisionList.append(precision)
-        accuracy = float(words[4])
+        accuracy = float(words[2])
         self.accuracyList.append(accuracy)
-        f1 = float(words[5])
+        f1 = float(words[3])
         self.f1List.append(f1)
-        iou = float(words[6])
+        iou = float(words[4])
         self.iouList.append(iou)
-        dice = float(words[7])
+        dice = float(words[5])
         self.diceList.append(dice)
 
     def Clear(self):
