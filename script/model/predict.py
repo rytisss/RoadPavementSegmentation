@@ -117,12 +117,10 @@ data_gen_args = dict(rotation_range=0.0,
                     horizontal_flip=False,
                     fill_mode='nearest')
 
-configs = ['l4k32ResAddOPConcResCross_2_0.001',
-'l4k32ResAddOPConcResCross_1_0.001',
-'l4k32ResAddOPConcResDice_0.001',
-'l4k32ResAddOPConcResDice_1_0.001',
-'l4k32ResAddOPConcResDice_2_0.001',
-'l4k32ResAddOPConcResCross_0.001']
+configs = ['l4k64ResAddOPConcResCross_2_0.001',
+'l4k64ResAddOPConcResCross_1_0.001',
+'l4k64ResAddOPConcResDice_0.001',
+'l4k64ResAddOPConcResDice_1_0.001']
 
 for config in configs:
     #configName = 'l5k16Dice_1'

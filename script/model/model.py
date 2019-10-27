@@ -374,7 +374,7 @@ def AutoEncoder5(pretrained_weights = None,
 		dec0 = BatchNormalization()(dec0)
 	dec0 = Activation('relu')(dec0)
 
-	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid")(dec0)
+	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer = 'glorot_normal')(dec0)
 	model = Model(inputs, outputs)
 	if (loss_function == Loss.DICE):
 		model.compile(optimizer = Adam(lr = 1e-3), loss = IOU_calc_loss, metrics = [dice_loss])
@@ -418,7 +418,7 @@ def AutoEncoder5ResAddOp(pretrained_weights = None,
 		dec0 = BatchNormalization()(dec0)
 	dec0 = Activation('relu')(dec0)
 
-	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid")(dec0)
+	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer = 'glorot_normal')(dec0)
 	model = Model(inputs, outputs)
 	if (loss_function == Loss.DICE):
 		model.compile(optimizer = Adam(lr = 1e-3), loss = IOU_calc_loss, metrics = [dice_loss])
@@ -463,7 +463,7 @@ def AutoEncoder5ResAddOpConcDec(pretrained_weights = None,
 		dec0 = BatchNormalization()(dec0)
 	dec0 = Activation('relu')(dec0)
 
-	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid")(dec0)
+	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer = 'glorot_normal')(dec0)
 	model = Model(inputs, outputs)
 	if (loss_function == Loss.DICE):
 		model.compile(optimizer = Adam(lr = 1e-3), loss = IOU_calc_loss, metrics = [dice_loss])
@@ -507,7 +507,7 @@ def AutoEncoder4(pretrained_weights = None,
 		dec0 = BatchNormalization()(dec0)
 	dec0 = Activation('relu')(dec0)
 
-	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid")(dec0)
+	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer = 'glorot_normal')(dec0)
 	model = Model(inputs, outputs)
 	if (loss_function == Loss.DICE):
 		model.compile(optimizer = Adam(lr = 1e-3), loss = IOU_calc_loss, metrics = [dice_loss])
@@ -549,7 +549,7 @@ def AutoEncoder4ResAddOp(pretrained_weights = None,
 		dec0 = BatchNormalization()(dec0)
 	dec0 = Activation('relu')(dec0)
 
-	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid")(dec0)
+	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer = 'glorot_normal')(dec0)
 	model = Model(inputs, outputs)
 	if (loss_function == Loss.DICE):
 		model.compile(optimizer = Adam(lr = 1e-3), loss = IOU_calc_loss, metrics = [dice_loss])
@@ -566,7 +566,7 @@ def AutoEncoder4ResAddOp(pretrained_weights = None,
 def AutoEncoder4ResAddOpConcDec(pretrained_weights = None,
 				input_size = (320,480,1),
 				kernel_size = 3,
-				number_of_kernels = 32,
+				number_of_kernels = 64,
 				stride = 1,
 				max_pool = True,
 				max_pool_size = 2,
