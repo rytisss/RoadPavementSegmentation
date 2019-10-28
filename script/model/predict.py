@@ -117,10 +117,10 @@ data_gen_args = dict(rotation_range=0.0,
                     horizontal_flip=False,
                     fill_mode='nearest')
 
-configs = ['l4k64ResAddOPConcResCross_2_0.001',
-'l4k64ResAddOPConcResCross_1_0.001',
-'l4k64ResAddOPConcResDice_0.001',
-'l4k64ResAddOPConcResDice_1_0.001']
+configs = ['l4k64Cross_0.001',
+'l4k64Cross_1_0.001',
+'l4k64Dice_0.001',
+'l4k64Dice_1_0.001']
 
 for config in configs:
     #configName = 'l5k16Dice_1'
@@ -132,7 +132,7 @@ for config in configs:
         print('Opening: ' + weightPath)
         fileNameWithExt = weightPath.rsplit('\\', 1)[1]
         fileName, extension = os.path.splitext(fileNameWithExt)
-        model = AutoEncoder4ResAddOpConcDec(pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
+        model = AutoEncoder4(pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
         testGene = testGenerator('C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Test/Images/')
         results = model.predict_generator(testGene,29,verbose=1)
                 

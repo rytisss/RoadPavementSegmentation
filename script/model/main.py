@@ -8,8 +8,6 @@ import skimage.io as io
 import skimage.transform as trans
 import cv2
 
-#make iteration throught every class data
-
 def adjustData(img,mask,flag_multi_class,num_class):
     if(flag_multi_class):
         img = img / 255
@@ -99,9 +97,10 @@ data_gen_args = dict(rotation_range=0.0,
                     fill_mode='nearest')
 
 learningRate = 0.001
+kernels = 32
 
 #1
-outputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput_new/l4k64ResAddOPConcResDice_' + str(learningRate) + '/'
+outputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput_new/l4k' + str(kernels) + 'Dice_' + str(learningRate) + '/'
 if not os.path.exists(outputDir):
     print('Output directory doesnt exist!\n')
     print('It will be created!\n')
@@ -109,48 +108,8 @@ if not os.path.exists(outputDir):
 
 generator = trainGenerator(2,'C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Train/Augm/','Images','Labels',data_gen_args,save_to_dir = None)
 
-model = AutoEncoder4ResAddOpConcDec(loss_function = Loss.DICE)
-outputPath = outputDir + "AutoEncoder4ResAddOpConcResDice-{epoch:03d}-{loss:.4f}.hdf5"
+model = AutoEncoder4(number_of_kernels=kernels, loss_function = Loss.DICE)
+outputPath = outputDir + "AutoEncoder4Dice-{epoch:03d}-{loss:.4f}.hdf5"
 model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False)
 model.fit_generator(generator,steps_per_epoch=176,epochs=50,callbacks=[model_checkpoint])
 
-#2
-outputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput_new/l4k64ResAddOPConcResCross_' + str(learningRate) + '/'
-if not os.path.exists(outputDir):
-    print('Output directory doesnt exist!\n')
-    print('It will be created!\n')
-    os.makedirs(outputDir)
-
-generator = trainGenerator(2,'C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Train/Augm/','Images','Labels',data_gen_args,save_to_dir = None)
-
-model = AutoEncoder4ResAddOpConcDec(loss_function = Loss.CROSSENTROPY)
-outputPath = outputDir + "AutoEncoder4ResAddOpConcResCross-{epoch:03d}-{loss:.4f}.hdf5"
-model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False)
-model.fit_generator(generator,steps_per_epoch=176,epochs=50,callbacks=[model_checkpoint])
-#3
-outputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput_new/l4k64ResAddOPConcResDice_1_' + str(learningRate) + '/'
-if not os.path.exists(outputDir):
-    print('Output directory doesnt exist!\n')
-    print('It will be created!\n')
-    os.makedirs(outputDir)
-
-generator = trainGenerator(2,'C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Train/Augm/','Images','Labels',data_gen_args,save_to_dir = None)
-
-model = AutoEncoder4ResAddOpConcDec(loss_function = Loss.DICE)
-outputPath = outputDir + "AutoEncoder4ResAddOpConcResDice-{epoch:03d}-{loss:.4f}.hdf5"
-model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False)
-model.fit_generator(generator,steps_per_epoch=176,epochs=50,callbacks=[model_checkpoint])
-
-#4
-outputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput_new/l4k64ResAddOPConcResCross_1_' + str(learningRate) + '/'
-if not os.path.exists(outputDir):
-    print('Output directory doesnt exist!\n')
-    print('It will be created!\n')
-    os.makedirs(outputDir)
-
-generator = trainGenerator(2,'C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Train/Augm/','Images','Labels',data_gen_args,save_to_dir = None)
-
-model = AutoEncoder4ResAddOpConcDec(loss_function = Loss.CROSSENTROPY)
-outputPath = outputDir + "AutoEncoder4ResAddOpConcResCross-{epoch:03d}-{loss:.4f}.hdf5"
-model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False)
-model.fit_generator(generator,steps_per_epoch=176,epochs=50,callbacks=[model_checkpoint])

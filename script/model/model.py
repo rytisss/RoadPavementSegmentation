@@ -1,5 +1,17 @@
 import numpy as np 
 import os
+
+os.environ['TF_DETERMINISTIC_OPS'] = '1'
+
+import tensorflow as tf
+from tfdeterminism import patch
+patch()
+
+import random
+os.environ['PYTHONHASHSEED']=str(1)
+random.seed(1)
+np.random.seed(1)
+
 #import skimage.io as io
 #import skimage.transform as trans
 import numpy as np
@@ -11,6 +23,7 @@ from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras import backend as keras
 
 from keras.utils.vis_utils import plot_model
+
 
 
 class Loss(Enum):
@@ -566,7 +579,7 @@ def AutoEncoder4ResAddOp(pretrained_weights = None,
 def AutoEncoder4ResAddOpConcDec(pretrained_weights = None,
 				input_size = (320,480,1),
 				kernel_size = 3,
-				number_of_kernels = 64,
+				number_of_kernels = 32,
 				stride = 1,
 				max_pool = True,
 				max_pool_size = 2,

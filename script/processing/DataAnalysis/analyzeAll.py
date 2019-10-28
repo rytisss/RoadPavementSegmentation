@@ -12,8 +12,8 @@ def GetCurrentPredictionInfo(path):
     info = os.path.basename(os.path.normpath(path))
     #three first symbols discribes epoch, then '-' and the rest 6 symbols are dice coeficient
     words = info.split('-')
-    epochNumber = int(words[0])
-    diceLoss = float(words[1]) 
+    epochNumber = int(words[1])
+    diceLoss = float(words[2]) 
     return epochNumber, diceLoss
 
 def GetFileName(path):
@@ -32,12 +32,22 @@ def AnalyzeArchitecture():
         inputPredictionSubDirs = glob.glob(inputDir + 'prediction/' + '*/')
         averageScore = open(inputDir + 'averageScore' + '.txt','w')
         configName = os.path.basename(os.path.normpath(inputDir))
-        firstLine = 'TrainingLoss Recall Precision Accuracy F1 IoU Dice' + '\n'
+        firstLine = 'Epoch TrainingLoss Recall Precision Accuracy F1 IoU Dice' + '\n'
         averageScore.write(firstLine)
-        allScores.write(firstLine)
         allScores.write(configName + '\n')
+        allScores.write(firstLine)
+        
+
+        #gather all training weights
+        weights = glob.glob(inputDir + '*.hdf5')
+        counter = 0
         #Do work in every subdirectory
         for inputPredictionSubDir in inputPredictionSubDirs:
+            #from weights name parse epoch index and loss
+            weightPath = weights[counter]
+            weightName = GetFileName(weightPath)
+            epochNr, loss = GetCurrentPredictionInfo(weightName)
+
             #epochNumber, trainingDiceLoss = GetCurrentPredictionInfo(inputPredictionSubDir)
             #trainingDice = round(1. - trainingDiceLoss, 4)
             #print('Epoch: ' + str(epochNumber) + ', training set Dice Coef: ' + str(trainingDice))
@@ -46,8 +56,6 @@ def AnalyzeArchitecture():
             
             #first line will be labels of data
             
-            
-
             #check if directories exist
             if not os.path.exists(inputPredictionSubDir):
                 print('Input prediction directory doesnt exist!\n')
@@ -124,7 +132,9 @@ def AnalyzeArchitecture():
             overallIoU = round(IoUSum / float(dataCount), 4)
             overallDice = round(dicsSum / float(dataCount), 4)
             print('Overall Score:')
-            print('Recall: ' + str(overallRecall) + 
+            print('Epoch: ' + str(epochNr) + 
+                    'Loss' + str(loss) + 
+                    'Recall: ' + str(overallRecall) + 
                     ', Precision: ' + str(overallPrecision) +
                     ', accuracy: ' + str(overallAccuracy) + 
                     ', f1: ' + str(overallF1) + 
@@ -132,10 +142,10 @@ def AnalyzeArchitecture():
                     ', Dice: ' + str(overallDice))
 
                 #for line
-            averageScoreLine = str(overallRecall) + ' ' + str(overallPrecision) + ' ' + str(overallAccuracy) + ' ' + str(overallF1) + ' ' + str(overallIoU) + ' ' + str(overallDice) + '\n'
+            averageScoreLine = str(epochNr) + ' ' + str(loss) +  ' ' + str(overallRecall) + ' ' + str(overallPrecision) + ' ' + str(overallAccuracy) + ' ' + str(overallF1) + ' ' + str(overallIoU) + ' ' + str(overallDice) + '\n'
             averageScore.write(averageScoreLine)
             allScores.write(averageScoreLine)
-
+            counter+=1
         averageScore.close()
     allScores.close()
 
