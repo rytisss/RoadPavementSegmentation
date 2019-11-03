@@ -117,26 +117,45 @@ data_gen_args = dict(rotation_range=0.0,
                     horizontal_flip=False,
                     fill_mode='nearest')
 
-configs = ['l4k64Cross_0.001',
-'l4k64Cross_1_0.001',
-'l4k64Dice_0.001',
-'l4k64Dice_1_0.001']
+configs = [
+'l4k16AutoEncoder4Dice_0.001_1',
+'l4k16AutoEncoder4ResAddOpConcDecDice_0.001_1',
+'l4k16AutoEncoder4ResAddOpDice_0.001_1']
 
 for config in configs:
     #configName = 'l5k16Dice_1'
     configName = config
-    inputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput_new/'+configName+'/'
+    inputDir = 'E:/RoadCracksInspection/trainingOutput/1/'+configName+'/'
     weightList = glob.glob(inputDir + '*.hdf5')
     counter = 0
     for weightPath in weightList:
         print('Opening: ' + weightPath)
         fileNameWithExt = weightPath.rsplit('\\', 1)[1]
         fileName, extension = os.path.splitext(fileNameWithExt)
-        model = AutoEncoder4(pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
-        testGene = testGenerator('C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Test/Images/')
-        results = model.predict_generator(testGene,29,verbose=1)
+        kernels_list = [16,32]
+        for kernels in kernels_list:
+            try:
+                model = AutoEncoder4(number_of_kernels = kernels, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
+                break
+            except:
+                print('Not AutoEncoder4')
+
+            try:
+               model = AutoEncoder4ResAddOp(number_of_kernels = kernels, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
+               break
+            except:
+                print('Not AutoEncoder4ResAddOp')
+
+            try:
+                model = AutoEncoder4ResAddOpConcDec(number_of_kernels = kernels, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
+                break
+            except:
+                print('Not AutoEncoder4ResAddOpConcDec')
+
+        testGene = testGenerator('E:/RoadCracksInspection/datasets/Set_1/Test/Images/')
+        results = model.predict_generator(testGene,35,verbose=1)
                 
-        predictionOutputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput_new/'+configName+'/prediction/' + str(counter) + '/'
+        predictionOutputDir = 'E:/RoadCracksInspection/trainingOutput/1/'+configName+'/prediction/' + str(counter) + '/'
         if not os.path.exists(predictionOutputDir):
             os.makedirs(predictionOutputDir)
         saveResult(predictionOutputDir,results)

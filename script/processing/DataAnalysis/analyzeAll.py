@@ -23,7 +23,7 @@ def GetFileName(path):
 
 def AnalyzeArchitecture():
     #do analysis for every class
-    trainings = 'C:/Users/DeepLearningRig/Desktop/trainingOutput_new/'
+    trainings = 'E:/RoadCracksInspection/trainingOutput/0/'
     allScores = open(trainings + 'allScores.txt','w')
 
     inputDirs = glob.glob(trainings + '*/')
@@ -37,7 +37,6 @@ def AnalyzeArchitecture():
         allScores.write(configName + '\n')
         allScores.write(firstLine)
         
-
         #gather all training weights
         weights = glob.glob(inputDir + '*.hdf5')
         counter = 0
@@ -69,8 +68,8 @@ def AnalyzeArchitecture():
                     os.makedirs(imageOutputDirectory)
             
                 """
-            imagePath = 'C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Test/Images/'
-            labelsPath = 'C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Test/Labels/'
+            imagePath = 'E:/RoadCracksInspection/datasets/Set_0/Test/Images/'
+            labelsPath = 'E:/RoadCracksInspection/datasets/Set_0/Test/Labels/'
             images = glob.glob(imagePath + '*.bmp')
             labels = glob.glob(labelsPath + '*.bmp')  
             predictions = glob.glob(inputPredictionSubDir + '*.bmp')      

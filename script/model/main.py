@@ -97,19 +97,21 @@ data_gen_args = dict(rotation_range=0.0,
                     fill_mode='nearest')
 
 learningRate = 0.001
-kernels = 32
+kernels = 16
+setNumber = 2
 
 #1
-outputDir = 'C:/Users/DeepLearningRig/Desktop/trainingOutput_new/l4k' + str(kernels) + 'Dice_' + str(learningRate) + '/'
+outputDir = 'E:/RoadCracksInspection/trainingOutput/' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4ResAddOpConcDecFirstExDice_' + str(learningRate) + '_' + str(setNumber) +'/'
 if not os.path.exists(outputDir):
     print('Output directory doesnt exist!\n')
     print('It will be created!\n')
     os.makedirs(outputDir)
 
-generator = trainGenerator(2,'C:/Users/DeepLearningRig/Desktop/crackForestDataset/SeparatedDataset/Set_0/Train/Augm/','Images','Labels',data_gen_args,save_to_dir = None)
+generator = trainGenerator(2,'C:/Users/DeepLearningRig/Desktop/datasets/Set_' + str(setNumber) + '/Train/Augm/','Images','Labels',data_gen_args,save_to_dir = None)
 
-model = AutoEncoder4(number_of_kernels=kernels, loss_function = Loss.DICE)
-outputPath = outputDir + "AutoEncoder4Dice-{epoch:03d}-{loss:.4f}.hdf5"
-model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False)
-model.fit_generator(generator,steps_per_epoch=176,epochs=50,callbacks=[model_checkpoint])
+model = AutoEncoder4ResAddOpConcDecFirstEx(number_of_kernels=kernels, loss_function = Loss.DICE)
+
+outputPath = outputDir + "AutoEncoder4ResAddOpConcDecFirstExDice-{epoch:03d}-{loss:.4f}.hdf5"
+model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False, save_weights_only=False)
+model.fit_generator(generator,steps_per_epoch=164,epochs=50,callbacks=[model_checkpoint])
 

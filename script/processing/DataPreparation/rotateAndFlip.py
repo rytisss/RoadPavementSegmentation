@@ -9,11 +9,11 @@ def saveImage(image, outputPath, name, prefix):
     cv2.imwrite(outputPath + name + prefix + '.bmp', image)
 
 def main():
-    inputDir = 'C:/Users/DeepLearningRig/Desktop/datasets/Set_1/Train/'
+    inputDir = 'C:/Users/DeepLearningRig/Desktop/datasets/Set_4/Train/'
     imageDir = inputDir + 'Images/'
     labelDir = inputDir + 'Labels/'
 
-    ouputDir = 'C:/Users/DeepLearningRig/Desktop/datasets/Set_1/Train/AUGM/'
+    ouputDir = 'C:/Users/DeepLearningRig/Desktop/datasets/Set_4/Train/AUGM/'
     outputImageDir = ouputDir + 'Images/'
     outputLabelDir = ouputDir + 'Labels/'
 
