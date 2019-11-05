@@ -1,17 +1,6 @@
 import numpy as np 
 import os
 
-os.environ['TF_DETERMINISTIC_OPS'] = '1'
-
-import tensorflow as tf
-from tfdeterminism import patch
-patch()
-
-import random
-os.environ['PYTHONHASHSEED']=str(1)
-random.seed(1)
-np.random.seed(1)
-
 #import skimage.io as io
 #import skimage.transform as trans
 import numpy as np
