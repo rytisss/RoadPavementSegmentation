@@ -9,7 +9,7 @@ def saveImage(image, outputPath, name, prefix):
     cv2.imwrite(outputPath + name + prefix + '.bmp', image)
 
 def main():
-    inputDir = 'E:/RoadCracksInspection/datasets90-10/Set_4/Train/'
+    inputDir = 'E:/RoadCracksInspection/datasets80-20/Set_0/Train/'
     imageDir = inputDir + 'Images/'
     labelDir = inputDir + 'Labels/'
 

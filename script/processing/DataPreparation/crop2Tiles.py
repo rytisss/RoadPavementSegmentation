@@ -47,80 +47,92 @@ def cropImageFromRegion(image, roi):
 
 
 def main():
-    inputDir = 'D:/RoadCracksInspection/datasets90-10/Set_0/Test/'
-    imageDir = inputDir + 'Images/'
-    labelDir = inputDir + 'Labels/'
 
-    ouputDir = 'D:/RoadCracksInspection/datasets90-10/Set_0/Test/Smaller/'
-    outputImageDir = ouputDir + 'Images/'
-    outputLabelDir = ouputDir + 'Labels/'
+    for setIndex in range(0,5):
+        inputDir = 'E:/RoadCracksInspection/datasets80-20/Set_' + str(setIndex) + '/Train/'
+        imageDir = inputDir + 'Images/'
+        labelDir = inputDir + 'Labels/'
 
-    if not os.path.exists(outputImageDir):
-        os.makedirs(outputImageDir)
+        ouputDir = 'E:/RoadCracksInspection/datasets80-20/Set_' + str(setIndex) + '/Train/Smaller/'
+        outputImageDir = ouputDir + 'Images/'
+        outputLabelDir = ouputDir + 'Labels/'
 
-    if not os.path.exists(outputLabelDir):
-            os.makedirs(outputLabelDir)
+        if not os.path.exists(outputImageDir):
+            os.makedirs(outputImageDir)
 
-    seed = 115
-    imagePaths  = glob.glob(imageDir + '*.bmp')
-    labelPaths = glob.glob(labelDir + '*.bmp')
-    random.Random(seed).shuffle(imagePaths)
-    random.Random(seed).shuffle(labelPaths)
+        if not os.path.exists(outputLabelDir):
+                os.makedirs(outputLabelDir)
 
-    #add additional number to front to be 'shuffle' randomly in directory
-    counter = 0
-    tileWidth = 240
-    tileHeight = 240
-    overlay = 120
+        seed = 115
+        imagePaths  = glob.glob(imageDir + '*.bmp')
+        labelPaths = glob.glob(labelDir + '*.bmp')
+        random.Random(seed).shuffle(imagePaths)
+        random.Random(seed).shuffle(labelPaths)
 
-    inputWidth = 480
-    inputHeight = 320
+        #add additional number to front to be 'shuffle' randomly in directory
+        counter = 0
+        tileWidth = 240
+        tileHeight = 240
+        overlay = 120
 
-    regions = splitImageToTiles(inputWidth,inputHeight, tileWidth, tileHeight, overlay)
+        inputWidth = 480
+        inputHeight = 320
 
-    for i in range(0, len(imagePaths)):
-        print("Image: " + imagePaths[i])
-        print("Label: " + labelPaths[i])
-        imageNameWithExt = imagePaths[i].rsplit('\\', 1)[1]
-        imageName, imageExtension = os.path.splitext(imageNameWithExt)
+        regions = splitImageToTiles(inputWidth,inputHeight, tileWidth, tileHeight, overlay)
 
-        labelNameWithExt = labelPaths[i].rsplit('\\', 1)[1]
-        labelName, labelExtension = os.path.splitext(imageNameWithExt)
+        for i in range(0, len(imagePaths)):
+            print("Image: " + imagePaths[i])
+            print("Label: " + labelPaths[i])
+            imageNameWithExt = imagePaths[i].rsplit('\\', 1)[1]
+            imageName, imageExtension = os.path.splitext(imageNameWithExt)
 
-        image = cv2.imread(imagePaths[i], cv2.IMREAD_UNCHANGED)
-        label = cv2.imread(labelPaths[i], cv2.IMREAD_UNCHANGED)
+            labelNameWithExt = labelPaths[i].rsplit('\\', 1)[1]
+            labelName, labelExtension = os.path.splitext(imageNameWithExt)
 
-        #do cropping, rotation and saving
-        for region in regions:
+            image = cv2.imread(imagePaths[i], cv2.IMREAD_UNCHANGED)
+            label = cv2.imread(labelPaths[i], cv2.IMREAD_UNCHANGED)
 
-            croppedImage = cropImageFromRegion(image, region)
-            croppedLabel = cropImageFromRegion(label, region)
+            #do cropping, rotation and saving
+            regionIndex = 0
+            for region in regions:
+                
+                croppedImage = cropImageFromRegion(image, region)
+                croppedLabel = cropImageFromRegion(label, region)
 
-            #original
-            frontName = str(random.randint(0,1000)) + '_'
-            print("Random: " + frontName)
-            saveImage(croppedImage, outputImageDir, frontName + imageName, '_')
-            saveImage(croppedLabel, outputLabelDir, frontName + labelName, '_')
-
-            augment = False
-            if augment:
-                #rotation 90
-                image90 = AugmentationTool.RotateImage(croppedImage, 90)
-                label90 = AugmentationTool.RotateImage(croppedLabel, 90)
-                frontName = str(random.randint(0,1000)) + '_'
-                print("Random: " + frontName)
-                saveImage(image90, outputImageDir, frontName + imageName, '_rot90')
-                saveImage(label90, outputLabelDir, frontName + labelName, '_rot90')
-
-            
-            #rotation 270
-            #image270 = AugmentationTool.RotateImage(croppedImage, 270)
-            #label270 = AugmentationTool.RotateImage(croppedLabel, 270)
-            #frontName = str(random.randint(0,1000))+ '_'
-            #print("Random: " + frontName)
-            #saveImage(image270, outputImageDir, frontName + imageName, '_rot270')
-            #saveImage(label270, outputLabelDir, frontName + labelName, '_rot270')
-            
+                augment = True
+                if not augment:
+                    #original
+                    frontName = str(random.randint(0,1000)) + '_'
+                    print("Random: " + frontName)
+                    saveImage(croppedImage, outputImageDir, frontName + imageName, '_')
+                    saveImage(croppedLabel, outputLabelDir, frontName + labelName, '_')
+                else:
+                    flips = [0, 1]
+                    rotates = [0,90,180,270]
+                    for flip in flips:
+                        for rotate in rotates:
+                            labelAdd = str(regionIndex) + '_rot_' + str(rotate) + '_flip_' + str(flip)
+                            if flip == 1:
+                                imageaug = AugmentationTool.FlipImageHorizontally(croppedImage)
+                                labelaug = AugmentationTool.FlipImageHorizontally(croppedLabel)
+                                imageaug = AugmentationTool.RotateImage(imageaug, rotate)
+                                labelaug = AugmentationTool.RotateImage(labelaug, rotate)
+                            else:
+                                imageaug = AugmentationTool.RotateImage(croppedImage, rotate)
+                                labelaug = AugmentationTool.RotateImage(croppedLabel, rotate)
+                            frontName = str(random.randint(0,1000)) + '_'
+                            print("Random: " + frontName)
+                            saveImage(imageaug, outputImageDir, frontName + imageName, labelAdd)
+                            saveImage(labelaug, outputLabelDir, frontName + labelName, labelAdd)
+                regionIndex+=1
+                #rotation 270
+                #image270 = AugmentationTool.RotateImage(croppedImage, 270)
+                #label270 = AugmentationTool.RotateImage(croppedLabel, 270)
+                #frontName = str(random.randint(0,1000))+ '_'
+                #print("Random: " + frontName)
+                #saveImage(image270, outputImageDir, frontName + imageName, '_rot270')
+                #saveImage(label270, outputLabelDir, frontName + labelName, '_rot270')
+                
 
 if __name__ == '__main__':
     main()

@@ -24,11 +24,11 @@ def GetLabelFilePath(imageFileName, labelFilesList, additionalExtention):
 #set how many set needed
 set2Create = 5
 #percentage of set as test
-tesSetPercentage = 10
+tesSetPercentage = 20
 #set directories
 inputImageDir = 'C:/Users/DeepLearningRig/Desktop/crackForestDataset/Images/'
 inputLabelDir = 'C:/Users/DeepLearningRig/Desktop/crackForestDataset/Labels/'
-outputDir = 'E:/RoadCracksInspection/datasets90-10/'
+outputDir = 'E:/RoadCracksInspection/datasets80-20/'
 
 #check if directories exist
 if not os.path.exists(inputImageDir):

@@ -113,60 +113,12 @@ kernels = 16
 setNumber = 1
 
 
-outputDir = 'E:/RoadCracksInspection/trainingOutput90-10/' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4Dice_0' + str(learningRate) + '_' + str(setNumber) +'/'
+outputDir = 'E:/RoadCracksInspection/trainingOutput80-20_Smaller/' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4Dice_0' + str(learningRate) + '_' + str(setNumber) +'/'
 if not os.path.exists(outputDir):
     print('Output directory doesnt exist!\n')
     print('It will be created!\n')
     os.makedirs(outputDir)
-generator = trainGenerator(2,'E:/RoadCracksInspection/datasets90-10/Set_' + str(setNumber) + '/Train/Augm/','Images','Labels',data_gen_args,save_to_dir = None)
-model = AutoEncoder4(number_of_kernels=kernels, loss_function = Loss.DICE)
-outputPath = outputDir + "AutoEncoder4Dice-{epoch:03d}-{loss:.4f}.hdf5"
-model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False, save_weights_only=False)
-model.fit_generator(generator,steps_per_epoch=212,epochs=50,callbacks=[model_checkpoint])
-keras.backend.clear_session()
-
-outputDir = 'E:/RoadCracksInspection/trainingOutput90-10/' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4Dice_1' + str(learningRate) + '_' + str(setNumber) +'/'
-if not os.path.exists(outputDir):
-    print('Output directory doesnt exist!\n')
-    print('It will be created!\n')
-    os.makedirs(outputDir)
-generator = trainGenerator(2,'E:/RoadCracksInspection/datasets90-10/Set_' + str(setNumber) + '/Train/Augm/','Images','Labels',data_gen_args,save_to_dir = None)
-model = AutoEncoder4(number_of_kernels=kernels, loss_function = Loss.DICE)
-outputPath = outputDir + "AutoEncoder4Dice-{epoch:03d}-{loss:.4f}.hdf5"
-model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False, save_weights_only=False)
-model.fit_generator(generator,steps_per_epoch=212,epochs=50,callbacks=[model_checkpoint])
-keras.backend.clear_session()
-
-outputDir = 'E:/RoadCracksInspection/trainingOutput90-10/' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4Dice_2' + str(learningRate) + '_' + str(setNumber) +'/'
-if not os.path.exists(outputDir):
-    print('Output directory doesnt exist!\n')
-    print('It will be created!\n')
-    os.makedirs(outputDir)
-generator = trainGenerator(2,'E:/RoadCracksInspection/datasets90-10/Set_' + str(setNumber) + '/Train/Augm/','Images','Labels',data_gen_args,save_to_dir = None)
-model = AutoEncoder4(number_of_kernels=kernels, loss_function = Loss.DICE)
-outputPath = outputDir + "AutoEncoder4Dice-{epoch:03d}-{loss:.4f}.hdf5"
-model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False, save_weights_only=False)
-model.fit_generator(generator,steps_per_epoch=212,epochs=50,callbacks=[model_checkpoint])
-keras.backend.clear_session()
-
-outputDir = 'E:/RoadCracksInspection/trainingOutput90-10/' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4Dice_3' + str(learningRate) + '_' + str(setNumber) +'/'
-if not os.path.exists(outputDir):
-    print('Output directory doesnt exist!\n')
-    print('It will be created!\n')
-    os.makedirs(outputDir)
-generator = trainGenerator(2,'E:/RoadCracksInspection/datasets90-10/Set_' + str(setNumber) + '/Train/Augm/','Images','Labels',data_gen_args,save_to_dir = None)
-model = AutoEncoder4(number_of_kernels=kernels, loss_function = Loss.DICE)
-outputPath = outputDir + "AutoEncoder4Dice-{epoch:03d}-{loss:.4f}.hdf5"
-model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False, save_weights_only=False)
-model.fit_generator(generator,steps_per_epoch=212,epochs=50,callbacks=[model_checkpoint])
-keras.backend.clear_session()
-
-outputDir = 'E:/RoadCracksInspection/trainingOutput90-10/' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4Dice_3' + str(learningRate) + '_' + str(setNumber) +'/'
-if not os.path.exists(outputDir):
-    print('Output directory doesnt exist!\n')
-    print('It will be created!\n')
-    os.makedirs(outputDir)
-generator = trainGenerator(2,'E:/RoadCracksInspection/datasets90-10/Set_' + str(setNumber) + '/Train/Augm/','Images','Labels',data_gen_args,save_to_dir = None)
+generator = trainGenerator(2,'E:/RoadCracksInspection/datasets80-20/Set_' + str(setNumber) + '/Train/Smaller/','Images','Labels',data_gen_args,save_to_dir = None)
 model = AutoEncoder4(number_of_kernels=kernels, loss_function = Loss.DICE)
 outputPath = outputDir + "AutoEncoder4Dice-{epoch:03d}-{loss:.4f}.hdf5"
 model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False, save_weights_only=False)
