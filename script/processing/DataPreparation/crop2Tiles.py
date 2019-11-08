@@ -48,12 +48,12 @@ def cropImageFromRegion(image, roi):
 
 def main():
 
-    for setIndex in range(0,5):
-        inputDir = 'E:/RoadCracksInspection/datasets80-20/Set_' + str(setIndex) + '/Train/'
+    for setIndex in range(1,2):
+        inputDir = 'E:/RoadCracksInspection/datasets80-20/Set_' + str(setIndex) + '/Test/'
         imageDir = inputDir + 'Images/'
         labelDir = inputDir + 'Labels/'
 
-        ouputDir = 'E:/RoadCracksInspection/datasets80-20/Set_' + str(setIndex) + '/Train/Smaller/'
+        ouputDir = 'E:/RoadCracksInspection/datasets80-20/Set_' + str(setIndex) + '/Test/Smaller/'
         outputImageDir = ouputDir + 'Images/'
         outputLabelDir = ouputDir + 'Labels/'
 
@@ -99,7 +99,7 @@ def main():
                 croppedImage = cropImageFromRegion(image, region)
                 croppedLabel = cropImageFromRegion(label, region)
 
-                augment = True
+                augment = False
                 if not augment:
                     #original
                     frontName = str(random.randint(0,1000)) + '_'

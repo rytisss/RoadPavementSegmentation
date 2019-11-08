@@ -117,14 +117,12 @@ data_gen_args = dict(rotation_range=0.0,
                     horizontal_flip=False,
                     fill_mode='nearest')
 
-configs = [
-'l4k16AutoEncoder4ResAddOpConcDecFirstExDice_0.001_1',
-'l4k16AutoEncoder4ResAddOpFirstExDice_0.001_1']
+configs = ['l4k16AutoEncoder4VGG16Dice_00.001_0']
 
 for config in configs:
     #configName = 'l5k16Dice_1'
     configName = config
-    inputDir = 'E:/RoadCracksInspection/trainingOutput/1/'+configName+'/'
+    inputDir = 'E:/RoadCracksInspection/trainingOutput/0/'+configName+'/'
     weightList = glob.glob(inputDir + '*.hdf5')
     counter = 0
     for weightPath in weightList:
@@ -132,7 +130,32 @@ for config in configs:
         fileNameWithExt = weightPath.rsplit('\\', 1)[1]
         fileName, extension = os.path.splitext(fileNameWithExt)
         kernels_list = [16,32]
+        size = (320,480,1)
         for kernels in kernels_list:
+            try:
+                model = AutoEncoder4VGG16(number_of_kernels = kernels,input_size = size, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
+                break
+            except:
+                print('Not AutoEncoder4VGG16')
+
+            try:
+                model = AutoEncoder4(number_of_kernels = kernels,input_size = size, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
+                break
+            except:
+                print('Not AutoEncoder4')
+            
+            try:
+                model = AutoEncoder4VGG16(number_of_kernels = kernels,input_size = size, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
+                break
+            except:
+                print('Not AutoEncoder4VGG16')
+            
+            try:
+                model = AutoEncoder4ResAddOpConcDecFirstEx(number_of_kernels = kernels,input_size = size, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
+                break
+            except:
+                print('Not AutoEncoder4ResAddOpConcDecFirstEx')
+
             try:
                 model = AutoEncoder4ResAddOpConcDecFirstEx(number_of_kernels = kernels, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
                 break
@@ -167,10 +190,10 @@ for config in configs:
 
             
 
-        testGene = testGenerator('E:/RoadCracksInspection/datasets/Set_1/Test/Images/')
+        testGene = testGenerator('E:/RoadCracksInspection/datasets/Set_0/Test/Images/', target_size = (320,480))
         results = model.predict_generator(testGene,35,verbose=1)
                 
-        predictionOutputDir = 'E:/RoadCracksInspection/trainingOutput/1/'+configName+'/prediction/' + str(counter) + '/'
+        predictionOutputDir = 'E:/RoadCracksInspection/trainingOutput/0/'+configName+'/prediction/' + str(counter) + '/'
         if not os.path.exists(predictionOutputDir):
             os.makedirs(predictionOutputDir)
         saveResult(predictionOutputDir,results)

@@ -136,6 +136,77 @@ def EncodingLayer(input,
 	#in next step this output needs to be activated
 	return oppositeConnection, output
 
+def EncodingLayerTripple(input,
+			kernels = 8,
+			kernel_size = 3,
+			stride = 1,
+			max_pool = True,
+			max_pool_size = 2,
+			batch_norm = True,
+			isInput = False):
+	
+	# Double convolution according to U-Net structure
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), strides = stride, padding = 'same', kernel_initializer = 'he_normal')(input)
+	# Batch-normalization on demand
+	if batch_norm == True:
+		conv = BatchNormalization()(conv)
+	conv = Activation('relu')(conv)
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(conv)
+	if batch_norm == True:
+		conv = BatchNormalization()(conv)
+	conv = Activation('relu')(conv)
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(conv)
+	if batch_norm == True:
+		conv = BatchNormalization()(conv)
+	conv = Activation('relu')(conv)
+	# Max-pool on demand
+	if max_pool == True:
+		oppositeConnection = conv
+		output = MaxPooling2D(pool_size=(max_pool_size, max_pool_size))(conv)
+	else:
+		oppositeConnection = conv
+		output = conv
+	#in next step this output needs to be activated
+	return oppositeConnection, output
+
+def EncodingLayerQuad(input,
+			kernels = 8,
+			kernel_size = 3,
+			stride = 1,
+			max_pool = True,
+			max_pool_size = 2,
+			batch_norm = True,
+			isInput = False):
+	
+	# Double convolution according to U-Net structure
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), strides = stride, padding = 'same', kernel_initializer = 'he_normal')(input)
+	# Batch-normalization on demand
+	if batch_norm == True:
+		conv = BatchNormalization()(conv)
+	conv = Activation('relu')(conv)
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(conv)
+	if batch_norm == True:
+		conv = BatchNormalization()(conv)
+	conv = Activation('relu')(conv)
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(conv)
+	if batch_norm == True:
+		conv = BatchNormalization()(conv)
+	conv = Activation('relu')(conv)
+	conv = Conv2D(kernels, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(conv)
+	if batch_norm == True:
+		conv = BatchNormalization()(conv)
+	conv = Activation('relu')(conv)
+	
+	# Max-pool on demand
+	if max_pool == True:
+		oppositeConnection = conv
+		output = MaxPooling2D(pool_size=(max_pool_size, max_pool_size))(conv)
+	else:
+		oppositeConnection = conv
+		output = conv
+	#in next step this output needs to be activated
+	return oppositeConnection, output
+
 def EncodingLayerResAddOp(input,
 			kernels = 8,
 			kernel_size = 3,
@@ -519,6 +590,91 @@ def AutoEncoder4(pretrained_weights = None,
 	if (pretrained_weights):
 		model.load_weights(pretrained_weights)
 	plot_model(model, to_file='AutoEncoder4.png', show_shapes=True, show_layer_names=True)
+	return model
+	
+
+#4-layer UNet VGG16
+def AutoEncoder4VGG16(pretrained_weights = None,
+				input_size = (320,480,1),
+				kernel_size = 3,
+				number_of_kernels = 32,
+				stride = 1,
+				max_pool = True,
+				max_pool_size = 2,
+				batch_norm = True,
+				loss_function = Loss.CROSSENTROPY):
+	# Input
+	inputs = Input(input_size)
+	#encoding
+	oppositeEnc0, enc0 = EncodingLayer(inputs, number_of_kernels, kernel_size,  stride, max_pool, max_pool_size, batch_norm)
+	oppositeEnc1, enc1 = EncodingLayer(enc0, number_of_kernels * 2, kernel_size, stride, max_pool, max_pool_size, batch_norm)
+	oppositeEnc2, enc2 = EncodingLayerTripple(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size, batch_norm)
+	#bottleneck without residual (might be without batch-norm)
+	#opposite connection is equal to enc4
+	oppositeEnc3, enc3 = EncodingLayerTripple(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size, batch_norm)
+	#decoding
+	#Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
+	dec2 = DecodingLayer(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size,  batch_norm)
+	dec1 = DecodingLayer(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm)
+	dec0 = DecodingLayer(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size,  batch_norm)
+
+	dec0 = Conv2D(2, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(dec0)
+	if batch_norm == True:
+		dec0 = BatchNormalization()(dec0)
+	dec0 = Activation('relu')(dec0)
+
+	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer = 'glorot_normal')(dec0)
+	model = Model(inputs, outputs)
+	if (loss_function == Loss.DICE):
+		model.compile(optimizer = Adam(lr = 1e-3), loss = IOU_calc_loss, metrics = [dice_loss])
+	elif (loss_function == Loss.CROSSENTROPY):
+		model.compile(optimizer = Adam(lr = 1e-3), loss = 'binary_crossentropy', metrics = ['accuracy'])
+	# Load trained weights if they are passed here
+	if (pretrained_weights):
+		model.load_weights(pretrained_weights)
+	plot_model(model, to_file='AutoEncoder4VGG16.png', show_shapes=True, show_layer_names=True)
+	return model
+	
+#4-layer UNet VGG16
+def AutoEncoder4VGG19(pretrained_weights = None,
+				input_size = (320,480,1),
+				kernel_size = 3,
+				number_of_kernels = 32,
+				stride = 1,
+				max_pool = True,
+				max_pool_size = 2,
+				batch_norm = True,
+				loss_function = Loss.CROSSENTROPY):
+	# Input
+	inputs = Input(input_size)
+	#encoding
+	oppositeEnc0, enc0 = EncodingLayer(inputs, number_of_kernels, kernel_size,  stride, max_pool, max_pool_size, batch_norm)
+	oppositeEnc1, enc1 = EncodingLayer(enc0, number_of_kernels * 2, kernel_size, stride, max_pool, max_pool_size, batch_norm)
+	oppositeEnc2, enc2 = EncodingLayerQuad(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size, batch_norm)
+	#bottleneck without residual (might be without batch-norm)
+	#opposite connection is equal to enc4
+	oppositeEnc3, enc3 = EncodingLayerQuad(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size, batch_norm)
+	#decoding
+	#Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
+	dec2 = DecodingLayer(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size,  batch_norm)
+	dec1 = DecodingLayer(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm)
+	dec0 = DecodingLayer(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size,  batch_norm)
+
+	dec0 = Conv2D(2, kernel_size = (kernel_size, kernel_size), strides = 1, padding = 'same', kernel_initializer = 'he_normal')(dec0)
+	if batch_norm == True:
+		dec0 = BatchNormalization()(dec0)
+	dec0 = Activation('relu')(dec0)
+
+	outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer = 'glorot_normal')(dec0)
+	model = Model(inputs, outputs)
+	if (loss_function == Loss.DICE):
+		model.compile(optimizer = Adam(lr = 1e-3), loss = IOU_calc_loss, metrics = [dice_loss])
+	elif (loss_function == Loss.CROSSENTROPY):
+		model.compile(optimizer = Adam(lr = 1e-3), loss = 'binary_crossentropy', metrics = ['accuracy'])
+	# Load trained weights if they are passed here
+	if (pretrained_weights):
+		model.load_weights(pretrained_weights)
+	plot_model(model, to_file='AutoEncoder4VGG19.png', show_shapes=True, show_layer_names=True)
 	return model
 
 #4-layer UNet with residual connection, opposite connectio with residual connections addition
