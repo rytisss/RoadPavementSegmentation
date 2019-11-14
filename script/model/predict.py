@@ -119,8 +119,9 @@ data_gen_args = dict(rotation_range=0.0,
 
 for setNumber in range(0, 5):
     configs = ['l4k32AutoEncoder4VGG16_5x5Cross_00.001_',
-    'l4k32AutoEncoder4ResAddOpConcDecFirstEx_5x5Cross_00.001_',
-    'l4k32AutoEncoder4_5x5Cross_00.001_']
+    'l4k32AutoEncoder4_5x5Cross_00.001_',
+    'l4k32AutoEncoder4ResAddOpConcDecFirstEx_5x5Cross_00.001_']
+    configNumber = 0
     for config in configs:
         #configName = 'l5k16Dice_1'
         configName = config
@@ -135,38 +136,51 @@ for setNumber in range(0, 5):
             kernels_list = [32]
             size = (320,480,1)
             for kernels in kernels_list:
-                try:
-                    model = AutoEncoder4VGG16_5x5(number_of_kernels = kernels,input_size = size, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
-                    break
-                except:
-                    print('Not AutoEncoder4VGG16_5x5')
-
-                try:
-                    model = AutoEncoder4_5x5(number_of_kernels = kernels,input_size = size, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
-                    break
-                except:
-                    print('Not AutoEncoder4_5x5')
-                
-                try:
-                    model = AutoEncoder4ResAddOpConcDecFirstEx_5x5(number_of_kernels = kernels,input_size = size, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
-                    break
-                except:
-                    print('Not AutoEncoder4ResAddOpConcDecFirstEx_5x5')
-                
-            testGene = testGenerator('E:/RoadCracksInspection/datasets/Set_' + str(setNumber) + '/Test/Images/', target_size = (320,480))
-            results = model.predict_generator(testGene,35,verbose=1)
-                    
-            predictionOutputDir = 'E:/RoadCracksInspection/trainingOutput/Set_' + str(setNumber) +'/'+configName+'/prediction/' + str(counter) + '/'
-            if not os.path.exists(predictionOutputDir):
-                os.makedirs(predictionOutputDir)
-            saveResult(predictionOutputDir,results)
-
+                if configNumber == 0:
+                    try:
+                        model = AutoEncoder4VGG16_5x5(number_of_kernels = kernels,input_size = size, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
+                        testGene = testGenerator('E:/RoadCracksInspection/datasets/Set_' + str(setNumber) + '/Test/Images/', target_size = (320,480))
+                        results = model.predict_generator(testGene,35,verbose=1)      
+                        predictionOutputDir = 'E:/RoadCracksInspection/trainingOutput/Set_' + str(setNumber) +'/'+configName+'/prediction/' + str(counter) + '/'
+                        if not os.path.exists(predictionOutputDir):
+                            os.makedirs(predictionOutputDir)
+                        saveResult(predictionOutputDir,results)
+                        break
+                    except:
+                        print('Not AutoEncoder4VGG16_5x5')
+                if configNumber == 1:
+                    try:
+                        model = AutoEncoder4_5x5(number_of_kernels = kernels,input_size = size, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
+                        testGene = testGenerator('E:/RoadCracksInspection/datasets/Set_' + str(setNumber) + '/Test/Images/', target_size = (320,480))
+                        results = model.predict_generator(testGene,35,verbose=1)      
+                        predictionOutputDir = 'E:/RoadCracksInspection/trainingOutput/Set_' + str(setNumber) +'/'+configName+'/prediction/' + str(counter) + '/'
+                        if not os.path.exists(predictionOutputDir):
+                            os.makedirs(predictionOutputDir)
+                        saveResult(predictionOutputDir,results)
+                        break
+                    except:
+                        print('Not AutoEncoder4_5x5')
+                if configNumber == 2:
+                    try:
+                        model = AutoEncoder4ResAddOpConcDecFirstEx_5x5(number_of_kernels = kernels,input_size = size, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
+                        testGene = testGenerator('E:/RoadCracksInspection/datasets/Set_' + str(setNumber) + '/Test/Images/', target_size = (320,480))
+                        results = model.predict_generator(testGene,35,verbose=1)      
+                        predictionOutputDir = 'E:/RoadCracksInspection/trainingOutput/Set_' + str(setNumber) +'/'+configName+'/prediction/' + str(counter) + '/'
+                        if not os.path.exists(predictionOutputDir):
+                            os.makedirs(predictionOutputDir)
+                        saveResult(predictionOutputDir,results)
+                        break
+                    except:
+                        print('Not AutoEncoder4ResAddOpConcDecFirstEx_5x5')
+            """    
             predictionOutputDir = 'E:/RoadCracksInspection/trainingOutputPictures/Set_' + str(setNumber) +'/'+configName+'/prediction/' + str(counter) + '/'
             if not os.path.exists(predictionOutputDir):
                 os.makedirs(predictionOutputDir)
             saveResult(predictionOutputDir,results)
+            """
 
             counter+=1
             keras.backend.clear_session()
+        configNumber+=1
             #print('Sleep for 5s !')
             #time.sleep(5)

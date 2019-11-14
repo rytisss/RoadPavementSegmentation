@@ -17,7 +17,8 @@ from keras.utils.vis_utils import plot_model
 
 class Loss(Enum):
 	CROSSENTROPY = 0,
-	DICE = 1
+	DICE = 1,
+	ACTIVECONTOURS = 2
 
 def dice_loss(y_true, y_pred):
 	smooth = 1e-6
@@ -29,6 +30,45 @@ def dice_loss(y_true, y_pred):
 	
 def IOU_calc_loss(y_true, y_pred):
 	return 1 - dice_loss(y_true, y_pred)
+
+#non-working
+def Active_Contour_Loss(y_true, y_pred): 
+
+	#y_pred = K.cast(y_pred, dtype = 'float64')
+
+	"""
+	lenth term
+	"""
+
+	x = y_pred[:,:,1:,:] - y_pred[:,:,:-1,:] # horizontal and vertical directions 
+	y = y_pred[:,:,:,1:] - y_pred[:,:,:,:-1]
+
+	delta_x = x[:,:,1:,:-2]**2
+	delta_y = y[:,:,:-2,1:]**2
+	delta_u = K.abs(delta_x + delta_y) 
+
+	epsilon = 0.00000001 # where is a parameter to avoid square root is zero in practice.
+	w = 1
+	lenth = w * K.sum(K.sqrt(delta_u + epsilon)) # equ.(11) in the paper
+
+	"""
+	region term
+	"""
+
+	C_1 = np.ones((480, 320))
+	C_2 = np.zeros((480, 320))
+
+	region_in = K.abs(K.sum( y_pred[:,0,:,:] * ((y_true[:,0,:,:] - C_1)**2) ) ) # equ.(12) in the paper
+	region_out = K.abs(K.sum( (1-y_pred[:,0,:,:]) * ((y_true[:,0,:,:] - C_2)**2) )) # equ.(12) in the paper
+
+	lambdaP = 1 # lambda parameter could be various.
+	
+	loss =  lenth + lambdaP * (region_in + region_out) 
+
+	return loss
+
+def Active_Contour_loss_minimization(y_true, y_pred):
+	return 1 - Active_Contour_Loss(y_true, y_pred)
 
 def unet_3layer(pretrained_weights = None,input_size = (512,512,1)):
 	features = 8
@@ -627,6 +667,8 @@ def AutoEncoder4_5x5(pretrained_weights = None,
 		model.compile(optimizer = Adam(lr = 1e-3), loss = IOU_calc_loss, metrics = [dice_loss])
 	elif (loss_function == Loss.CROSSENTROPY):
 		model.compile(optimizer = Adam(lr = 1e-3), loss = 'binary_crossentropy', metrics = ['accuracy'])
+	elif (loss_function == Loss.ACTIVECONTOURS):
+		model.compile(optimizer = Adam(lr = 1e-3), loss = Active_Contour_loss_minimization, metrics = [Active_Contour_Loss])
 	# Load trained weights if they are passed here
 	if (pretrained_weights):
 		model.load_weights(pretrained_weights)
