@@ -8,17 +8,51 @@ from enum import Enum
 from keras.models import *
 from keras.layers import *
 from keras.optimizers import *
-from keras.callbacks import ModelCheckpoint, LearningRateScheduler
+from keras.callbacks import ModelCheckpoint, LearningRateScheduler, Callback
 from keras import backend as keras
 
 from keras.utils.vis_utils import plot_model
-
-
+from scipy.ndimage import distance_transform_edt as distance
 
 class Loss(Enum):
 	CROSSENTROPY = 0,
 	DICE = 1,
-	ACTIVECONTOURS = 2
+	ACTIVECONTOURS = 2,
+	SURFACEnDice = 3
+#------> 
+alpha = K.variable(1, dtype='float32')
+
+class AlphaScheduler(Callback):
+ def on_epoch_end(self, epoch, logs=None):
+  alpha = alpha - 0.01
+
+def calc_dist_map(seg):
+    res = np.zeros_like(seg)
+    posmask = seg.astype(np.bool)
+
+    if posmask.any():
+        negmask = ~posmask
+        res = distance(negmask) * negmask - (distance(posmask) - 1) * posmask
+
+    return res
+
+def calc_dist_map_batch(y_true):
+    y_true_numpy = y_true.numpy()
+    return np.array([calc_dist_map(y)
+                     for y in y_true_numpy]).astype(np.float32)
+
+def surface_loss(y_true, y_pred):
+    y_true_dist_map = tf.py_function(func=calc_dist_map_batch,
+                                     inp=[y_true],
+                                     Tout=tf.float32)
+    multipled = y_pred * y_true_dist_map
+    return K.mean(multipled) 
+
+def SurficenDiceLoss(y_true, y_pred):
+	alpha_ = 0.5
+	dice = IOU_calc_loss(y_true, y_pred) * alpha_
+	surface = surface_loss(y_true, y_pred) * (1.0 - alpha_)
+	return dice + surface
 
 def dice_loss(y_true, y_pred):
 	smooth = 1e-6
@@ -68,7 +102,7 @@ def Active_Contour_Loss(y_true, y_pred):
 	return loss
 
 def Active_Contour_loss_minimization(y_true, y_pred):
-	return 1 - Active_Contour_Loss(y_true, y_pred)
+	return Active_Contour_Loss(y_true, y_pred)
 
 def unet_3layer(pretrained_weights = None,input_size = (512,512,1)):
 	features = 8
@@ -669,6 +703,8 @@ def AutoEncoder4_5x5(pretrained_weights = None,
 		model.compile(optimizer = Adam(lr = 1e-3), loss = 'binary_crossentropy', metrics = ['accuracy'])
 	elif (loss_function == Loss.ACTIVECONTOURS):
 		model.compile(optimizer = Adam(lr = 1e-3), loss = Active_Contour_loss_minimization, metrics = [Active_Contour_Loss])
+	elif (loss_function == Loss.SURFACEnDice):
+		model.compile(optimizer = Adam(lr = 1e-3), loss = SurficenDiceLoss, metrics = [dice_loss])
 	# Load trained weights if they are passed here
 	if (pretrained_weights):
 		model.load_weights(pretrained_weights)

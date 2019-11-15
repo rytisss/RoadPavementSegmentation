@@ -109,18 +109,19 @@ data_gen_args = dict(rotation_range=0.0,
                     fill_mode='nearest')
 
 learningRate = 0.001
-kernels = 16
+kernels = 32
 setNumber = 0
 
 
-outputDir = 'E:/RoadCracksInspection/trainingOutput/' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4_5x5ActiveContours_0' + str(learningRate) + '_' + str(setNumber) +'/'
+outputDir = 'E:/RoadCracksInspection/trainingOutput/' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4_5x5Surface2_0' + str(learningRate) + '_' + str(setNumber) +'/'
 if not os.path.exists(outputDir):
     print('Output directory doesnt exist!\n')
     print('It will be created!\n')
     os.makedirs(outputDir)
 generator = trainGenerator(2,'E:/RoadCracksInspection/datasets/Set_' + str(setNumber) + '/Train/AUGM/','Images','Labels',data_gen_args,save_to_dir = None, target_size = (320,480))
-model = AutoEncoder4_5x5(number_of_kernels=kernels,input_size = (320,480,1), loss_function = Loss.ACTIVECONTOURS)
-outputPath = outputDir + "AutoEncoder4_5x5ActiveContours-{epoch:03d}-{loss:.4f}.hdf5"
+model = AutoEncoder4_5x5(number_of_kernels=kernels,input_size = (320,480,1), loss_function = Loss.SURFACEnDice)
+outputPath = outputDir + "AutoEncoder4_5x5Surface-{epoch:03d}-{loss:.4f}.hdf5"
+scheduler = AlphaScheduler()
 model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False, save_weights_only=False)
 model.fit_generator(generator,steps_per_epoch=164,epochs=50,callbacks=[model_checkpoint])
 keras.backend.clear_session()
