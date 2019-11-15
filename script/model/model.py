@@ -20,11 +20,14 @@ class Loss(Enum):
 	ACTIVECONTOURS = 2,
 	SURFACEnDice = 3
 #------> 
-alpha = K.variable(1, dtype='float32')
+alpha = K.variable(1.0, dtype='float32')
 
 class AlphaScheduler(Callback):
  def on_epoch_end(self, epoch, logs=None):
-  alpha = alpha - 0.01
+  alpha_ = K.get_value(alpha)
+  alpha_ -= 0.015
+  K.set_value(alpha, alpha_)
+  print(alpha_)
 
 def calc_dist_map(seg):
     res = np.zeros_like(seg)
@@ -49,7 +52,7 @@ def surface_loss(y_true, y_pred):
     return K.mean(multipled) 
 
 def SurficenDiceLoss(y_true, y_pred):
-	alpha_ = 0.5
+	alpha_ = alpha
 	dice = IOU_calc_loss(y_true, y_pred) * alpha_
 	surface = surface_loss(y_true, y_pred) * (1.0 - alpha_)
 	return dice + surface
@@ -704,7 +707,7 @@ def AutoEncoder4_5x5(pretrained_weights = None,
 	elif (loss_function == Loss.ACTIVECONTOURS):
 		model.compile(optimizer = Adam(lr = 1e-3), loss = Active_Contour_loss_minimization, metrics = [Active_Contour_Loss])
 	elif (loss_function == Loss.SURFACEnDice):
-		model.compile(optimizer = Adam(lr = 1e-3), loss = SurficenDiceLoss, metrics = [dice_loss])
+		model.compile(optimizer = Adam(lr = 1e-3), loss = SurficenDiceLoss, metrics = [IOU_calc_loss])
 	# Load trained weights if they are passed here
 	if (pretrained_weights):
 		model.load_weights(pretrained_weights)
