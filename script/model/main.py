@@ -8,6 +8,7 @@ import skimage.io as io
 import skimage.transform as trans
 import cv2
 import keras
+import math
 
 os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
 os.environ['TF_DETERMINISTIC_OPS'] = '1'
@@ -112,16 +113,27 @@ learningRate = 0.001
 kernels = 32
 setNumber = 0
 
-outputDir = 'E:/RoadCracksInspection/trainingOutput/' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4_5x5SurfaceCallback_0' + str(learningRate) + '_' + str(setNumber) +'/'
+def step_decay(epoch):
+   initial_lrate = 0.001
+   drop = 0.5
+   epochs_drop = 15.0
+   lrate = initial_lrate * math.pow(drop,  
+           math.floor((1+epoch)/epochs_drop))
+   print("learning rate: " + str(lrate))
+   return lrate
+
+outputDir = 'E:/RoadCracksInspection/trainingOutput/Set_' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4_5x5SurfaceDiceHalf_0' + str(learningRate) + '_' + str(setNumber) +'/'
 if not os.path.exists(outputDir):
     print('Output directory doesnt exist!\n')
     print('It will be created!\n')
     os.makedirs(outputDir)
+    
 generator = trainGenerator(4,'E:/RoadCracksInspection/datasets/Set_' + str(setNumber) + '/Train/AUGM/','Images','Labels',data_gen_args,save_to_dir = None, target_size = (320,480))
 model = AutoEncoder4_5x5(number_of_kernels=kernels,input_size = (320,480,1), loss_function = Loss.SURFACEnDice)
-outputPath = outputDir + "AutoEncoder4_5x5Surface-{epoch:03d}-{loss:.4f}.hdf5"
+outputPath = outputDir + "AutoEncoder4_5x5Dice-{epoch:03d}-{loss:.4f}.hdf5"
 scheduler = AlphaScheduler()
 model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False, save_weights_only=False)
-model.fit_generator(generator,steps_per_epoch=82,epochs=50,callbacks=[model_checkpoint, scheduler])
+lrate = LearningRateScheduler(step_decay)
+model.fit_generator(generator,steps_per_epoch=82,epochs=50,callbacks=[model_checkpoint, scheduler, lrate])
 keras.backend.clear_session()
 

@@ -118,13 +118,13 @@ data_gen_args = dict(rotation_range=0.0,
                     fill_mode='nearest')
 
 for setNumber in range(0, 5):
-    configs = ['l4k32AutoEncoder4_5x5Surface2_00.001_']
+    configs = ['l4k32AutoEncoder4_5x5SurfaceDiceHalf_00.001_']
     configNumber = 1
     for config in configs:
         #configName = 'l5k16Dice_1'
         configName = config
         configName += str(setNumber)
-        inputDir = 'E:/RoadCracksInspection/trainingOutput/' + str(setNumber) +'/'+ configName+'/'
+        inputDir = 'E:/RoadCracksInspection/trainingOutput/Set_' + str(setNumber) +'/'+ configName+'/'
         weightList = glob.glob(inputDir + '*.hdf5')
         counter = 0
         for weightPath in weightList:

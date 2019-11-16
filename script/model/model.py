@@ -25,8 +25,11 @@ alpha = K.variable(1.0, dtype='float32')
 class AlphaScheduler(Callback):
  def on_epoch_end(self, epoch, logs=None):
   alpha_ = K.get_value(alpha)
-  alpha_ -= 0.015
-  K.set_value(alpha, alpha_)
+  if epoch > 15:
+   alpha_ -= 0.05
+   if alpha_ < 0.5:
+    alpha_ = 0.5
+   K.set_value(alpha, alpha_)
   print(alpha_)
 
 def calc_dist_map(seg):
