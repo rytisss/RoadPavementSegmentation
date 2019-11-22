@@ -113,14 +113,14 @@ def AnalyzeArchitecture():
                 innerColor = (0,0,80)
                 renderedImage = Render.Defects(image, prediction, outerColor, innerColor)
                         
-                
+                """
                 cv2.imshow('Rendered', renderedImage)
                 cv2.imshow('Label', label)
                 cv2.imshow('Image', image)
                 cv2.imshow('Prediction', prediction)
 
                 cv2.waitKey(1)
-                
+                """
                         #save rendered image
                         #cv2.imwrite(imageOutputDirectory + GetFileName(predictionPath) + '.jpg', renderedImage)
 

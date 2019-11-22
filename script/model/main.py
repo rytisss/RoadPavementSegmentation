@@ -1,15 +1,12 @@
-from model import *
-import time
+from keras.callbacks import ModelCheckpoint
+from script.model import *
 from keras.preprocessing.image import ImageDataGenerator
 import numpy as np 
 import os
-import glob
-import skimage.io as io
-import skimage.transform as trans
 import cv2
 import keras
 import math
-from datetime import datetime
+
 
 os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
 os.environ['TF_DETERMINISTIC_OPS'] = '1'
@@ -37,7 +34,7 @@ def adjustData(img,mask,flag_multi_class,num_class):
         mask = new_mask
     elif(np.max(img) > 1):
         img = img / 255
-        mask = mask /255
+        mask = mask / 255
         mask[mask > 0.5] = 1
         mask[mask <= 0.5] = 0
     return (img,mask)
@@ -75,8 +72,8 @@ def trainGenerator(batch_size,train_path,image_folder,mask_folder,aug_dict,image
         seed = seed,
         shuffle=False)
     train_generator = zip(image_generator, mask_generator)
-    for (img,mask) in train_generator:
-        img,mask = adjustData(img,mask,flag_multi_class,num_class)
+    for (img, mask) in train_generator:
+        img, mask = adjustData(img, mask , flag_multi_class, num_class)
 
         showNetworkData = False
         if showNetworkData:
@@ -123,14 +120,14 @@ def step_decay(epoch):
    print("learning rate: " + str(lrate))
    return lrate
 
-outputDir = 'E:/RoadCracksInspection/trainingOutput/Set_' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4_5x5Focal1' + str(learningRate) + '_' + str(setNumber) +'/'
+outputDir = 'E:/RoadCracksInspection/trainingOutput/Set_' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4_5x5WeightCross' + str(learningRate) + '_' + str(setNumber) +'/'
 if not os.path.exists(outputDir):
     print('Output directory doesnt exist!\n')
     print('It will be created!\n')
     os.makedirs(outputDir)
 generator = trainGenerator(4,'E:/RoadCracksInspection/datasets/Set_' + str(setNumber) + '/Train/AUGM/','Images','Labels',data_gen_args,save_to_dir = None, target_size = (320,480))
-model = AutoEncoder4_5x5(number_of_kernels=kernels,input_size = (320,480,1), loss_function = Loss.FOCALLOSS)
-outputPath = outputDir + "AutoEncoder4_5x5Dice-{epoch:03d}-{loss:.4f}.hdf5"
+model = AutoEncoder4_5x5(number_of_kernels=kernels,input_size = (320,480,1), loss_function = Loss.CROSSnDICE)
+outputPath = outputDir + "AutoEncoder4_5x5-{epoch:03d}-{loss:.4f}.hdf5"
 #scheduler = AlphaScheduler()
 model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False, save_weights_only=False)
 #lrate = LearningRateScheduler(step_decay)#do not use for now

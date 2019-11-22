@@ -14,12 +14,7 @@ from keras import backend as keras
 from keras.utils.vis_utils import plot_model
 from scipy.ndimage import distance_transform_edt as distance
 
-class Loss(Enum):
- CROSSENTROPY = 0,
- DICE = 1,
- ACTIVECONTOURS = 2,
- SURFACEnDice = 3,
- FOCALLOSS = 4
+
 #------> 
 alpha = K.variable(1.0, dtype='float32')
 
@@ -32,154 +27,7 @@ class AlphaScheduler(Callback):
   K.set_value(alpha, alpha_)
   print(alpha_)
 
-def calc_dist_map(seg):
-    res = np.zeros_like(seg)
-    posmask = seg.astype(np.bool)
-    if posmask.any():
-        negmask = ~posmask
-        res = distance(negmask) * negmask - (distance(posmask) - 1) * posmask
-    return res
 
-def calc_dist_map_batch(y_true):
-    y_true_numpy = y_true.numpy()
-    return np.array([calc_dist_map(y)
-                     for y in y_true_numpy]).astype(np.float32)
-
-def surface_loss(y_true, y_pred):
-    y_true_dist_map = tf.py_function(func=calc_dist_map_batch,
-                                     inp=[y_true],
-                                     Tout=tf.float32)
-    multipled = y_pred * y_true_dist_map
-    return K.mean(multipled) 
-
-def SurficenDiceLoss(y_true, y_pred):
-	alpha_ = alpha
-	
-	dice = IOU_calc_loss(y_true, y_pred)
-	dice *= alpha_
-	surface = surface_loss(y_true, y_pred)
-	surface *= (1.0 - alpha_)
-	return dice + surface
-
-def tversky_loss(y_true, y_pred, alpha=0.3, beta=0.7, smooth=1e-10):
-    """ Tversky loss function.
-    Parameters
-    ----------
-    y_true : keras tensor
-        tensor containing target mask.
-    y_pred : keras tensor
-        tensor containing predicted mask.
-    alpha : float
-        real value, weight of '0' class.
-    beta : float
-        real value, weight of '1' class.
-    smooth : float
-        small real value used for avoiding division by zero error.
-    Returns
-    -------
-    keras tensor
-        tensor containing tversky loss.
-    """
-    y_true = K.flatten(y_true)
-    y_pred = K.flatten(y_pred)
-    truepos = K.sum(y_true * y_pred)
-    fp_and_fn = alpha * K.sum(y_pred * (1 - y_true)) + beta * K.sum((1 - y_pred) * y_true)
-    answer = (truepos + smooth) / ((truepos + smooth) + fp_and_fn)
-    return -answer#might be 1 -
-
-
-def jaccard_coef_logloss(y_true, y_pred, smooth=1e-10):
-    """ Loss function based on jaccard coefficient.
-    Parameters
-    ----------
-    y_true : keras tensor
-        tensor containing target mask.
-    y_pred : keras tensor
-        tensor containing predicted mask.
-    smooth : float
-        small real value used for avoiding division by zero error.
-    Returns
-    -------
-    keras tensor
-        tensor containing negative logarithm of jaccard coefficient.
-    """
-    y_true = K.flatten(y_true)
-    y_pred = K.flatten(y_pred)
-    truepos = K.sum(y_true * y_pred)
-    falsepos = K.sum(y_pred) - truepos
-    falseneg = K.sum(y_true) - truepos
-    jaccard = (truepos + smooth) / (smooth + truepos + falseneg + falsepos)
-    return -K.log(jaccard + smooth)#might be 1 - 
-
-def FocalLoss(y_true, y_pred):
-    """
-    :param y_true: A tensor of the same shape as `y_pred`
-    :param y_pred:  A tensor resulting from a sigmoid
-    :return: Output tensor.
-    """
-    gamma=3.0
-    alpha=0.25
-
-    pt_1 = tf.where(tf.equal(y_true, 1), y_pred, tf.ones_like(y_pred))
-    pt_0 = tf.where(tf.equal(y_true, 0), y_pred, tf.zeros_like(y_pred))
-    
-    epsilon = K.epsilon()
-    # clip to prevent NaN's and Inf's
-    pt_1 = K.clip(pt_1, epsilon, 1. - epsilon)
-    pt_0 = K.clip(pt_0, epsilon, 1. - epsilon)
-    
-    return -K.mean(alpha * K.pow(1. - pt_1, gamma) * K.log(pt_1)) \
-           -K.mean((1 - alpha) * K.pow(pt_0, gamma) * K.log(1. - pt_0))
-    
-def dice_loss(y_true, y_pred):
-	smooth = 1e-6
-	y_true_f = keras.flatten(y_true)
-	y_pred_f = keras.flatten(y_pred)
-	intersection = keras.sum(y_true_f * y_pred_f)
-	answer = (2. * intersection + smooth) / (keras.sum(y_true_f) + keras.sum(y_pred_f) + smooth)
-	return answer
-	
-def IOU_calc_loss(y_true, y_pred):
-	return 1 - dice_loss(y_true, y_pred)
-
-def alpha_check(y_true, y_pred):
-	return alpha
-
-#non-working
-def Active_Contour_Loss(y_true, y_pred): 
-
-	#y_pred = K.cast(y_pred, dtype = 'float64')
-
-	"""
-	lenth term
-	"""
-
-	x = y_pred[:,:,1:,:] - y_pred[:,:,:-1,:] # horizontal and vertical directions 
-	y = y_pred[:,:,:,1:] - y_pred[:,:,:,:-1]
-
-	delta_x = x[:,:,1:,:-2]**2
-	delta_y = y[:,:,:-2,1:]**2
-	delta_u = K.abs(delta_x + delta_y) 
-
-	epsilon = 0.00000001 # where is a parameter to avoid square root is zero in practice.
-	w = 1
-	lenth = w * K.sum(K.sqrt(delta_u + epsilon)) # equ.(11) in the paper
-
-	"""
-	region term
-	"""
-
-	C_1 = np.ones((480, 320))
-	C_2 = np.zeros((480, 320))
-
-	region_in = K.abs(K.sum( y_pred[:,0,:,:] * ((y_true[:,0,:,:] - C_1)**2) ) ) # equ.(12) in the paper
-	region_out = K.abs(K.sum( (1-y_pred[:,0,:,:]) * ((y_true[:,0,:,:] - C_2)**2) )) # equ.(12) in the paper
-
-	lambdaP = 1 # lambda parameter could be various.
-	
-	loss =  lenth + lambdaP * (region_in + region_out) 
-
-	return loss
 
 def Active_Contour_loss_minimization(y_true, y_pred):
 	return Active_Contour_Loss(y_true, y_pred)
@@ -787,6 +635,8 @@ def AutoEncoder4_5x5(pretrained_weights = None,
 		model.compile(optimizer = Adam(lr = 1e-3), loss = SurficenDiceLoss, metrics = [surface_loss])
 	elif (loss_function == Loss.FOCALLOSS):
 		model.compile(optimizer = Adam(lr = 5e-3), loss = FocalLoss, metrics = ['accuracy'])
+	elif (loss_function == Loss.CROSSnDICE):
+		model.compile(optimizer = Adam(lr = 1e-3), loss = weighted_bce_dice_loss, metrics = [dice_loss])
 	# Load trained weights if they are passed here
 	if (pretrained_weights):
 		model.load_weights(pretrained_weights)
