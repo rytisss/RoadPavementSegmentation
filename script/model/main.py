@@ -1,3 +1,4 @@
+from keras import Model
 from keras.callbacks import ModelCheckpoint
 from script.model.autoencoder import *
 from script.model.utilities import *

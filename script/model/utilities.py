@@ -52,7 +52,7 @@ def adjustData(img, mask, flag_multi_class, num_class):
         else:
             new_mask = np.reshape(new_mask, (new_mask.shape[0] * new_mask.shape[1], new_mask.shape[2]))
         mask = new_mask
-    elif np.max(img) > 1:
+    elif (np.max(img) > 1):
         img = img / 255.
         mask = mask / 255.0
         mask[mask > 0.5] = 1.0

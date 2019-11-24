@@ -57,7 +57,7 @@ def get_weight_matrix(y_true, y_pred):
 # weight: weighted tensor(same shape with mask image)
 def weighted_bce_loss(y_true, y_pred, weight):
     # avoiding overflow
-    epsilon = K.epsilon()
+    epsilon = K.backend.epsilon()
     y_pred = K.clip(y_pred, epsilon, 1. - epsilon)
     logit_y_pred = K.log(y_pred / (1. - y_pred))
 
@@ -189,11 +189,11 @@ def FocalLoss(y_true, y_pred):
 
 
 def dice_score(y_true, y_pred):
-    smooth = K.epsilon()
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    intersection = K.sum(y_true_f * y_pred_f)
-    answer = (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+    smooth = K.backend.epsilon()
+    y_true_f = K.backend.flatten(y_true)
+    y_pred_f = K.backend.flatten(y_pred)
+    intersection = K.backend.sum(y_true_f * y_pred_f)
+    answer = (2. * intersection + smooth) / (K.backend.sum(y_true_f) + K.backend.sum(y_pred_f) + smooth)
     return answer
 
 

@@ -5,8 +5,7 @@ from script.model.layers import *
 from keras.optimizers import *
 from keras.utils.vis_utils import plot_model
 
-
-def Compile(model, lossFunction):
+def CompileModel(model, lossFunction):
     if lossFunction == Loss.DICE:
         model.compile(optimizer=Adam(lr=1e-3), loss=dice_loss, metrics=[dice_score])
     elif lossFunction == Loss.CROSSENTROPY:
@@ -62,7 +61,7 @@ def AutoEncoder5(pretrained_weights=None,
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
     # Compile with selected loss function
-    model = Compile(model, loss_function)
+    model = CompileModel(model, loss_function)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
@@ -110,8 +109,8 @@ def AutoEncoder5ResAddOp(pretrained_weights=None,
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
-    # Compile with selected loss function
-    model = Compile(model, loss_function)
+    # CompileModel with selected loss function
+    model = CompileModel(model, loss_function)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
@@ -161,7 +160,7 @@ def AutoEncoder5ResAddOpConcDec(pretrained_weights=None,
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
     # Compile with selected loss function
-    model = Compile(model, loss_function)
+    model = CompileModel(model, loss_function)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
@@ -208,7 +207,7 @@ def AutoEncoder4(pretrained_weights=None,
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
     # Compile with selected loss function
-    model = Compile(model, loss_function)
+    model = CompileModel(model, loss_function)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
@@ -252,7 +251,7 @@ def AutoEncoder4_5x5(pretrained_weights=None,
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
     # Compile with selected loss function
-    model = Compile(model, loss_function)
+    CompileModel(model, loss_function)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
@@ -298,7 +297,7 @@ def AutoEncoder4VGG16(pretrained_weights=None,
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
     # Compile with selected loss function
-    model = Compile(model, loss_function)
+    model = CompileModel(model, loss_function)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
@@ -342,7 +341,7 @@ def AutoEncoder4VGG16_5x5(pretrained_weights=None,
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
     # Compile with selected loss function
-    model = Compile(model, loss_function)
+    model = CompileModel(model, loss_function)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
@@ -388,7 +387,7 @@ def AutoEncoder4VGG19(pretrained_weights=None,
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
     # Compile with selected loss function
-    model = Compile(model, loss_function)
+    model = CompileModel(model, loss_function)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
@@ -434,7 +433,7 @@ def AutoEncoder4ResAddOp(pretrained_weights=None,
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
     # Compile with selected loss function
-    model = Compile(model, loss_function)
+    model = CompileModel(model, loss_function)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
@@ -480,7 +479,7 @@ def AutoEncoder4ResAddOpFirstEx(pretrained_weights=None,
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
     # Compile with selected loss function
-    model = Compile(model, loss_function)
+    model = CompileModel(model, loss_function)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
@@ -527,7 +526,7 @@ def AutoEncoder4ResAddOpConcDec(pretrained_weights=None,
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
     # Compile with selected loss function
-    model = Compile(model, loss_function)
+    model = CompileModel(model, loss_function)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
@@ -572,7 +571,7 @@ def AutoEncoder4ResAddOpConcDecFirstEx(pretrained_weights=None,
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
     # Compile with selected loss function
-    model = Compile(model, loss_function)
+    model = CompileModel(model, loss_function)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
@@ -617,7 +616,7 @@ def AutoEncoder4ResAddOpConcDecFirstEx_5x5(pretrained_weights=None,
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
     # Compile with selected loss function
-    model = Compile(model, loss_function)
+    model = CompileModel(model, loss_function)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
