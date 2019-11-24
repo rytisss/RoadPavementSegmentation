@@ -28,10 +28,6 @@ class AlphaScheduler(Callback):
   print(alpha_)
 
 
-
-def Active_Contour_loss_minimization(y_true, y_pred):
-	return Active_Contour_Loss(y_true, y_pred)
-
 def unet_3layer(pretrained_weights = None,input_size = (512,512,1)):
 	features = 8
 	inputs = Input(input_size)

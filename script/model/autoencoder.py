@@ -5,20 +5,22 @@ from script.model.layers import *
 from keras.optimizers import *
 from keras.utils.vis_utils import plot_model
 
+
 def Compile(model, lossFunction):
     if lossFunction == Loss.DICE:
-        model.compile(optimizer=Adam(lr=1e-3), loss=dice_loss(), metrics=[dice_score])
+        model.compile(optimizer=Adam(lr=1e-3), loss=dice_loss, metrics=[dice_score])
     elif lossFunction == Loss.CROSSENTROPY:
         model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=[dice_score])
     elif lossFunction == Loss.ACTIVECONTOURS:
-        model.compile(optimizer=Adam(lr=1e-3), loss=Active_Contour_Loss(), metrics=[dice_score])
+        model.compile(optimizer=Adam(lr=1e-3), loss=Active_Contour_Loss, metrics=[dice_score])
     elif lossFunction == Loss.SURFACEnDice:
-        model.compile(optimizer=Adam(lr=1e-3), loss=surface_loss(), metrics=[dice_score])
+        model.compile(optimizer=Adam(lr=1e-3), loss=surface_loss, metrics=[dice_score])
     elif lossFunction == Loss.FOCALLOSS:
         model.compile(optimizer=Adam(lr=5e-3), loss=FocalLoss, metrics=[dice_score])
     elif lossFunction == Loss.CROSSnDICE:
         model.compile(optimizer=Adam(lr=1e-3), loss=weighted_bce_dice_loss, metrics=[dice_score])
     return model
+
 
 def AutoEncoder5(pretrained_weights=None,
                  input_size=(320, 480, 1),
@@ -53,18 +55,16 @@ def AutoEncoder5(pretrained_weights=None,
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
-    if batch_norm == True:
+    if batch_norm:
         dec0 = BatchNormalization()(dec0)
     dec0 = Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
-    if (loss_function == Loss.DICE):
-        model.compile(optimizer=Adam(lr=1e-3), loss=IOU_calc_loss, metrics=[dice_loss])
-    elif (loss_function == Loss.CROSSENTROPY):
-        model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+    # Compile with selected loss function
+    model = Compile(model, loss_function)
     # Load trained weights if they are passed here
-    if (pretrained_weights):
+    if pretrained_weights:
         model.load_weights(pretrained_weights)
     plot_model(model, to_file='AutoEncoder5.png', show_shapes=True, show_layer_names=True)
     return model
@@ -104,18 +104,16 @@ def AutoEncoder5ResAddOp(pretrained_weights=None,
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
-    if batch_norm == True:
+    if batch_norm:
         dec0 = BatchNormalization()(dec0)
     dec0 = Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
-    if (loss_function == Loss.DICE):
-        model.compile(optimizer=Adam(lr=1e-3), loss=IOU_calc_loss, metrics=[dice_loss])
-    elif (loss_function == Loss.CROSSENTROPY):
-        model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+    # Compile with selected loss function
+    model = Compile(model, loss_function)
     # Load trained weights if they are passed here
-    if (pretrained_weights):
+    if pretrained_weights:
         model.load_weights(pretrained_weights)
     plot_model(model, to_file='AutoEncoderRes5shorcutAdditionToOp.png', show_shapes=True, show_layer_names=True)
     return model
@@ -156,18 +154,16 @@ def AutoEncoder5ResAddOpConcDec(pretrained_weights=None,
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
-    if batch_norm == True:
+    if batch_norm:
         dec0 = BatchNormalization()(dec0)
     dec0 = Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
-    if (loss_function == Loss.DICE):
-        model.compile(optimizer=Adam(lr=1e-3), loss=IOU_calc_loss, metrics=[dice_loss])
-    elif (loss_function == Loss.CROSSENTROPY):
-        model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+    # Compile with selected loss function
+    model = Compile(model, loss_function)
     # Load trained weights if they are passed here
-    if (pretrained_weights):
+    if pretrained_weights:
         model.load_weights(pretrained_weights)
     plot_model(model, to_file='AutoEncoderRes5shorcutAdditionToOpConcRes.png', show_shapes=True, show_layer_names=True)
     return model
@@ -205,18 +201,16 @@ def AutoEncoder4(pretrained_weights=None,
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
-    if batch_norm == True:
+    if batch_norm:
         dec0 = BatchNormalization()(dec0)
     dec0 = Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
-    if (loss_function == Loss.DICE):
-        model.compile(optimizer=Adam(lr=1e-3), loss=IOU_calc_loss, metrics=[dice_loss])
-    elif (loss_function == Loss.CROSSENTROPY):
-        model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+    # Compile with selected loss function
+    model = Compile(model, loss_function)
     # Load trained weights if they are passed here
-    if (pretrained_weights):
+    if pretrained_weights:
         model.load_weights(pretrained_weights)
     plot_model(model, to_file='AutoEncoder4.png', show_shapes=True, show_layer_names=True)
     return model
@@ -251,26 +245,16 @@ def AutoEncoder4_5x5(pretrained_weights=None,
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
-    if batch_norm == True:
+    if batch_norm:
         dec0 = BatchNormalization()(dec0)
     dec0 = Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
-    if (loss_function == Loss.DICE):
-        model.compile(optimizer=Adam(lr=1e-3), loss=IOU_calc_loss, metrics=[dice_loss])
-    elif (loss_function == Loss.CROSSENTROPY):
-        model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
-    elif (loss_function == Loss.ACTIVECONTOURS):
-        model.compile(optimizer=Adam(lr=1e-3), loss=Active_Contour_loss_minimization, metrics=[Active_Contour_Loss])
-    elif (loss_function == Loss.SURFACEnDice):
-        model.compile(optimizer=Adam(lr=1e-3), loss=SurficenDiceLoss, metrics=[surface_loss])
-    elif (loss_function == Loss.FOCALLOSS):
-        model.compile(optimizer=Adam(lr=5e-3), loss=FocalLoss, metrics=['accuracy'])
-    elif (loss_function == Loss.CROSSnDICE):
-        model.compile(optimizer=Adam(lr=1e-3), loss=weighted_bce_dice_loss, metrics=[dice_loss])
+    # Compile with selected loss function
+    model = Compile(model, loss_function)
     # Load trained weights if they are passed here
-    if (pretrained_weights):
+    if pretrained_weights:
         model.load_weights(pretrained_weights)
     plot_model(model, to_file='AutoEncoder4_5x5.png', show_shapes=True, show_layer_names=True)
     return model
@@ -307,18 +291,16 @@ def AutoEncoder4VGG16(pretrained_weights=None,
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
-    if batch_norm == True:
+    if batch_norm:
         dec0 = BatchNormalization()(dec0)
     dec0 = Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
-    if (loss_function == Loss.DICE):
-        model.compile(optimizer=Adam(lr=1e-3), loss=IOU_calc_loss, metrics=[dice_loss])
-    elif (loss_function == Loss.CROSSENTROPY):
-        model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+    # Compile with selected loss function
+    model = Compile(model, loss_function)
     # Load trained weights if they are passed here
-    if (pretrained_weights):
+    if pretrained_weights:
         model.load_weights(pretrained_weights)
     plot_model(model, to_file='AutoEncoder4VGG16.png', show_shapes=True, show_layer_names=True)
     return model
@@ -353,18 +335,16 @@ def AutoEncoder4VGG16_5x5(pretrained_weights=None,
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
-    if batch_norm == True:
+    if batch_norm:
         dec0 = BatchNormalization()(dec0)
     dec0 = Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
-    if (loss_function == Loss.DICE):
-        model.compile(optimizer=Adam(lr=1e-3), loss=IOU_calc_loss, metrics=[dice_loss])
-    elif (loss_function == Loss.CROSSENTROPY):
-        model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+    # Compile with selected loss function
+    model = Compile(model, loss_function)
     # Load trained weights if they are passed here
-    if (pretrained_weights):
+    if pretrained_weights:
         model.load_weights(pretrained_weights)
     plot_model(model, to_file='AutoEncoder4VGG16_5x5.png', show_shapes=True, show_layer_names=True)
     return model
@@ -407,12 +387,10 @@ def AutoEncoder4VGG19(pretrained_weights=None,
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
-    if (loss_function == Loss.DICE):
-        model.compile(optimizer=Adam(lr=1e-3), loss=IOU_calc_loss, metrics=[dice_loss])
-    elif (loss_function == Loss.CROSSENTROPY):
-        model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+    # Compile with selected loss function
+    model = Compile(model, loss_function)
     # Load trained weights if they are passed here
-    if (pretrained_weights):
+    if pretrained_weights:
         model.load_weights(pretrained_weights)
     plot_model(model, to_file='AutoEncoder4VGG19.png', show_shapes=True, show_layer_names=True)
     return model
@@ -449,18 +427,16 @@ def AutoEncoder4ResAddOp(pretrained_weights=None,
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
-    if batch_norm == True:
+    if batch_norm:
         dec0 = BatchNormalization()(dec0)
     dec0 = Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
-    if (loss_function == Loss.DICE):
-        model.compile(optimizer=Adam(lr=1e-3), loss=IOU_calc_loss, metrics=[dice_loss])
-    elif (loss_function == Loss.CROSSENTROPY):
-        model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+    # Compile with selected loss function
+    model = Compile(model, loss_function)
     # Load trained weights if they are passed here
-    if (pretrained_weights):
+    if pretrained_weights:
         model.load_weights(pretrained_weights)
     plot_model(model, to_file='AutoEncoderRes4shorcutAdditionToOp.png', show_shapes=True, show_layer_names=True)
     return model
@@ -497,18 +473,16 @@ def AutoEncoder4ResAddOpFirstEx(pretrained_weights=None,
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
-    if batch_norm == True:
+    if batch_norm:
         dec0 = BatchNormalization()(dec0)
     dec0 = Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
-    if (loss_function == Loss.DICE):
-        model.compile(optimizer=Adam(lr=1e-3), loss=IOU_calc_loss, metrics=[dice_loss])
-    elif (loss_function == Loss.CROSSENTROPY):
-        model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+    # Compile with selected loss function
+    model = Compile(model, loss_function)
     # Load trained weights if they are passed here
-    if (pretrained_weights):
+    if pretrained_weights:
         model.load_weights(pretrained_weights)
     plot_model(model, to_file='AutoEncoderRes4shorcutAdditionToOpFirstEx.png', show_shapes=True, show_layer_names=True)
     return model
@@ -546,18 +520,16 @@ def AutoEncoder4ResAddOpConcDec(pretrained_weights=None,
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
-    if batch_norm == True:
+    if batch_norm:
         dec0 = BatchNormalization()(dec0)
     dec0 = Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
-    if (loss_function == Loss.DICE):
-        model.compile(optimizer=Adam(lr=1e-3), loss=IOU_calc_loss, metrics=[dice_loss])
-    elif (loss_function == Loss.CROSSENTROPY):
-        model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+    # Compile with selected loss function
+    model = Compile(model, loss_function)
     # Load trained weights if they are passed here
-    if (pretrained_weights):
+    if pretrained_weights:
         model.load_weights(pretrained_weights)
     plot_model(model, to_file='AutoEncoderRes4shorcutAdditionToOpConcRes.png', show_shapes=True, show_layer_names=True)
     return model
@@ -593,18 +565,16 @@ def AutoEncoder4ResAddOpConcDecFirstEx(pretrained_weights=None,
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
-    if batch_norm == True:
+    if batch_norm:
         dec0 = BatchNormalization()(dec0)
     dec0 = Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
-    if (loss_function == Loss.DICE):
-        model.compile(optimizer=Adam(lr=1e-3), loss=IOU_calc_loss, metrics=[dice_loss])
-    elif (loss_function == Loss.CROSSENTROPY):
-        model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+    # Compile with selected loss function
+    model = Compile(model, loss_function)
     # Load trained weights if they are passed here
-    if (pretrained_weights):
+    if pretrained_weights:
         model.load_weights(pretrained_weights)
     plot_model(model, to_file='AutoEncoderRes4shorcutAdditionToOpConcResFirstEx.png', show_shapes=True,
                show_layer_names=True)
@@ -640,18 +610,16 @@ def AutoEncoder4ResAddOpConcDecFirstEx_5x5(pretrained_weights=None,
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
-    if batch_norm == True:
+    if batch_norm:
         dec0 = BatchNormalization()(dec0)
     dec0 = Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
-    if (loss_function == Loss.DICE):
-        model.compile(optimizer=Adam(lr=1e-3), loss=IOU_calc_loss, metrics=[dice_loss])
-    elif (loss_function == Loss.CROSSENTROPY):
-        model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+    # Compile with selected loss function
+    model = Compile(model, loss_function)
     # Load trained weights if they are passed here
-    if (pretrained_weights):
+    if pretrained_weights:
         model.load_weights(pretrained_weights)
     plot_model(model, to_file='AutoEncoder4ResAddOpConcDecFirstEx_5x5.png', show_shapes=True, show_layer_names=True)
     return model
