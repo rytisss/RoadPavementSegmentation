@@ -15,7 +15,7 @@ class Loss(Enum):
     CROSSnDICE = 5
 
 
-alpha = K.variable(1.0, dtype='float32')
+alpha = K.backend.variable(1.0, dtype='float32')
 
 """
 Scheduling example
