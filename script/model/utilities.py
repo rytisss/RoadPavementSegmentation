@@ -34,7 +34,7 @@ COLOR_DICT = np.array([Sky,
                        Unlabelled])
 
 
-# Normalize imput data
+# Normalize input data
 def adjustData(img, mask, flag_multi_class, num_class):
     if flag_multi_class:
         img = img / 255

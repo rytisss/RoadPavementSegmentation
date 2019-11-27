@@ -36,7 +36,7 @@ if not os.path.exists(outputDir):
     print('Output directory doesnt exist!\n')
     print('It will be created!\n')
     os.makedirs(outputDir)
-generator = trainGenerator(4,'E:/RoadCracksInspection/datasets/Set_' + str(setNumber) + '/Train/AUGM/','Images','Labels',data_gen_args,save_to_dir = None, target_size = (320,480))
+generator = trainGenerator(4,'D:/RoadCracksInspection/datasets/Set_' + str(setNumber) + '/Train/AUGM/','Images','Labels',data_gen_args,save_to_dir = None, target_size = (320,480))
 model = AutoEncoder4_5x5(number_of_kernels=kernels,input_size = (320,480,1), loss_function = Loss.DICE)
 outputPath = outputDir + "AutoEncoder4_5x5-{epoch:03d}-{loss:.4f}.hdf5"
 #scheduler = AlphaScheduler()

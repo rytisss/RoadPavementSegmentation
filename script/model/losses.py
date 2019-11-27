@@ -40,22 +40,25 @@ def calc_dist_map(seg):
         res = distance(negmask) * negmask - (distance(posmask) - 1) * posmask
     return res
 
-def get_weight_matrix(y_true, y_pred):
+#get weight matrix for tensor (image or images stack)
+def get_weight_matrix(y_true):
     y_true = K.cast(y_true, 'float32')
-    y_pred = K.cast(y_pred, 'float32')
     # if we want to get same size of output, kernel size must be odd number
-    averaged_mask = K.pool2d(
-        y_true, pool_size=(11, 11), strides=(1, 1), padding='same', pool_mode='avg')
-    border = K.cast(K.greater(averaged_mask, 0.005), 'float32') * K.cast(K.less(averaged_mask, 0.995), 'float32')
-    weight = K.ones_like(averaged_mask)
+    #averaged_mask = K.pool2d(
+    #    y_true, pool_size=(11, 11), strides=(1, 1), padding='same', pool_mode='avg')
+    #border = K.cast(K.greater(averaged_mask, 0.005), 'float32') * K.cast(K.less(averaged_mask, 0.995), 'float32')
+    # basically finds label, (non-black) points in tensor
+    labelmatrix = K.cast(K.greater(y_true, 0.5), 'float32')
+    weight = K.ones_like(y_true)
     w0 = K.sum(weight)
-    weight += border * 2
+    weight += labelmatrix
     w1 = K.sum(weight)
     weight *= (w0 / w1)
     return weight
 
 # weight: weighted tensor(same shape with mask image)
-def weighted_bce_loss(y_true, y_pred, weight):
+def weighted_bce_loss(y_true, y_pred):
+    weight = get_weight_matrix(y_true)
     # avoiding overflow
     epsilon = K.backend.epsilon()
     y_pred = K.clip(y_pred, epsilon, 1. - epsilon)
@@ -67,7 +70,8 @@ def weighted_bce_loss(y_true, y_pred, weight):
     return K.sum(loss) / K.sum(weight)
 
 
-def weighted_dice_loss(y_true, y_pred, weight):
+def weighted_dice_loss(y_true, y_pred):
+    weight = get_weight_matrix(y_true)
     smooth = 1.
     w, m1, m2 = weight * weight, y_true, y_pred
     intersection = (m1 * m2)
