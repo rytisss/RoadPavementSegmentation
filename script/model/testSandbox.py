@@ -20,6 +20,12 @@ def tensor2image(tensor):
     image = tensor[0,:,:,:]
     return image
 
+def visualize_tensor(tensor, windowName):
+    image = tensor2image(tensor)
+    image *= 255
+    cv2.imshow(windowName, image)
+    cv2.waitKey(1)
+
 def main():
     # image path
     data_input = "D:/RoadCracksInspection/datasets/Set_0/Train/"
@@ -41,8 +47,13 @@ def main():
         #calculate weights
         weights_tensor = get_weight_matrix(label_tensorN)
         print(type(weights_tensor))
-        weights_numpy = K.eval(weights_tensor)
+        weights_numpy = K.eval(weights_tensor)#basically tensor to numpy
 
+        #find edge
+        edge_tensor = get_edge_matrix(label_tensorN)
+        print(type(edge_tensor))
+        edge_numpy = K.eval(edge_tensor)  # basically tensor to numpy
+        visualize_tensor(edge_numpy, "edge")
         cv2.waitKey(0)
     cv2.destroyAllWindows()
 

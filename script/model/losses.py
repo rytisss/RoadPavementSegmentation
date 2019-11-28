@@ -56,6 +56,15 @@ def get_weight_matrix(y_true):
     weight *= (w0 / w1)
     return weight
 
+#get weight matrix for tensor (image or images stack)
+def get_edge_matrix(y_true):
+    y_true = K.backend.cast(y_true, 'float32')
+    #if we want to get same size of output, kernel size must be odd number
+    averaged_mask = K.backend.pool2d(
+        y_true, pool_size=(3, 3), strides=(1, 1), padding='same', pool_mode='avg')
+    edge = K.backend.cast(K.backend.greater(averaged_mask, 0.3), 'float32') * K.backend.cast(K.backend.less(averaged_mask, 0.7), 'float32')
+    return edge
+
 # weight: weighted tensor(same shape with mask image)
 def weighted_bce_loss(y_true, y_pred):
     weight = get_weight_matrix(y_true)
