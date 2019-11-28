@@ -42,17 +42,17 @@ def calc_dist_map(seg):
 
 #get weight matrix for tensor (image or images stack)
 def get_weight_matrix(y_true):
-    y_true = K.cast(y_true, 'float32')
+    y_true = K.backend.cast(y_true, 'float32')
     # if we want to get same size of output, kernel size must be odd number
     #averaged_mask = K.pool2d(
     #    y_true, pool_size=(11, 11), strides=(1, 1), padding='same', pool_mode='avg')
     #border = K.cast(K.greater(averaged_mask, 0.005), 'float32') * K.cast(K.less(averaged_mask, 0.995), 'float32')
     # basically finds label, (non-black) points in tensor
-    labelmatrix = K.cast(K.greater(y_true, 0.5), 'float32')
-    weight = K.ones_like(y_true)
-    w0 = K.sum(weight)
+    labelmatrix = K.backend.cast(K.backend.greater(y_true, 0.5), 'float32')
+    weight = K.backend.ones_like(y_true)
+    w0 = K.backend.sum(weight)
     weight += labelmatrix
-    w1 = K.sum(weight)
+    w1 = K.backend.sum(weight)
     weight *= (w0 / w1)
     return weight
 
