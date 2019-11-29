@@ -2,11 +2,8 @@ import os
 import glob
 import cv2
 import numpy as np
-from imageData import ImageData
-from statistics import Statistics
-from render import Render
-from filtering import Filtering
-
+from script.processing.DataAnalysis.statistics import Statistics
+from script.processing.DataAnalysis.render import Render
 
 def GetCurrentPredictionInfo(path):
     info = os.path.basename(os.path.normpath(path))
@@ -23,7 +20,7 @@ def GetFileName(path):
 
 def AnalyzeArchitecture():
     #do analysis for every class
-    trainings = 'E:/RoadCracksInspection/trainingOutput/Set_0/'
+    trainings = 'C:/src/Set_0/'
     allScores = open(trainings + 'allScores.txt','w')
 
     inputDirs = glob.glob(trainings + '*/')

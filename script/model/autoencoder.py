@@ -18,6 +18,8 @@ def CompileModel(model, lossFunction):
         model.compile(optimizer=Adam(lr=5e-3), loss=FocalLoss, metrics=[dice_score])
     elif lossFunction == Loss.CROSSnDICE:
         model.compile(optimizer=Adam(lr=1e-3), loss=weighted_bce_dice_loss, metrics=[dice_score])
+    elif lossFunction == Loss.WEIGHTEDCROSSENTROPY:
+        model.compile(optimizer=Adam(lr=1e-3), loss=weighted_bce_loss, metrics=[dice_score])
     return model
 
 

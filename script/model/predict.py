@@ -1,7 +1,8 @@
 from script.model.utilities import *
 import glob
-from script.model import *
+from script.model.autoencoder import *
 import os
+import keras as K
 
 data_gen_args = dict(rotation_range=0.0,
                     width_shift_range=0.00,
@@ -12,13 +13,13 @@ data_gen_args = dict(rotation_range=0.0,
                     fill_mode='nearest')
 
 for setNumber in range(0, 5):
-    configs = ['l4k32AutoEncoder4_5x5WeightCross0.001_']
+    configs = ['l4k32AutoEncoder4_5x5Dice0.001_']
     configNumber = 1
     for config in configs:
         #configName = 'l5k16Dice_1'
         configName = config
         configName += str(setNumber)
-        inputDir = 'E:/RoadCracksInspection/trainingOutput/Set_' + str(setNumber) +'/'+ configName+'/'
+        inputDir = 'C:/src/Set_' + str(setNumber) +'/'+ configName+'/'
         weightList = glob.glob(inputDir + '*.hdf5')
         counter = 0
         for weightPath in weightList:
@@ -30,7 +31,7 @@ for setNumber in range(0, 5):
             for kernels in kernels_list:
                 if configNumber == 0:
                     try:
-                        model = AutoEncoder4VGG16_5x5(number_of_kernels = kernels,input_size = size, pretrained_weights = weightPath, loss_function = Loss.ACTIVECONTOURS)
+                        model = AutoEncoder4VGG16_5x5(number_of_kernels = kernels,input_size = size, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
                         testGene = testGenerator('E:/RoadCracksInspection/datasets/Set_' + str(setNumber) + '/Test/Images/', target_size = (320,480))
                         results = model.predict_generator(testGene,35,verbose=1)      
                         predictionOutputDir = 'E:/RoadCracksInspection/trainingOutput/Set_' + str(setNumber) +'/'+configName+'/prediction/' + str(counter) + '/'
@@ -45,7 +46,7 @@ for setNumber in range(0, 5):
                         model = AutoEncoder4_5x5(number_of_kernels = kernels,input_size = size, pretrained_weights = weightPath, loss_function = Loss.CROSSENTROPY)
                         testGene = testGenerator('E:/RoadCracksInspection/datasets/Set_' + str(setNumber) + '/Test/Images/', target_size = (320,480))
                         results = model.predict_generator(testGene,35,verbose=1)      
-                        predictionOutputDir = 'E:/RoadCracksInspection/trainingOutput/Set_' + str(setNumber) +'/'+configName+'/prediction/' + str(counter) + '/'
+                        predictionOutputDir = 'C:/src/Set_' + str(setNumber) +'/'+configName+'/prediction/' + str(counter) + '/'
                         if not os.path.exists(predictionOutputDir):
                             os.makedirs(predictionOutputDir)
                         saveResult(predictionOutputDir,results)
@@ -72,7 +73,7 @@ for setNumber in range(0, 5):
             """
 
             counter+=1
-            keras.backend.clear_session()
-        configNumber+=1
+            K.backend.clear_session()
+        #configNumber+=1
             #print('Sleep for 5s !')
             #time.sleep(5)

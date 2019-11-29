@@ -12,7 +12,8 @@ class Loss(Enum):
     ACTIVECONTOURS = 2,
     SURFACEnDice = 3,
     FOCALLOSS = 4,
-    CROSSnDICE = 5
+    CROSSnDICE = 5,
+    WEIGHTEDCROSSENTROPY = 6
 
 
 alpha = K.backend.variable(1.0, dtype='float32')
@@ -48,7 +49,7 @@ def get_weight_matrix(y_true):
     #    y_true, pool_size=(11, 11), strides=(1, 1), padding='same', pool_mode='avg')
     #border = K.cast(K.greater(averaged_mask, 0.005), 'float32') * K.cast(K.less(averaged_mask, 0.995), 'float32')
     # basically finds label, (non-black) points in tensor
-    labelmatrix = K.backend.cast(K.backend.greater(y_true, 0.5), 'float32')
+    labelmatrix = K.backend.cast(K.backend.greater(y_true, 0.6), 'float32')
     weight = K.backend.ones_like(y_true)
     w0 = K.backend.sum(weight)
     weight += labelmatrix
@@ -57,12 +58,12 @@ def get_weight_matrix(y_true):
     return weight
 
 #get weight matrix for tensor (image or images stack)
-def get_edge_matrix(y_true):
+def get_edge_matrix(y_true, min_kernel_overlay = 0.5, max_kernel_overlay = 0.8):
     y_true = K.backend.cast(y_true, 'float32')
     #if we want to get same size of output, kernel size must be odd number
     averaged_mask = K.backend.pool2d(
         y_true, pool_size=(3, 3), strides=(1, 1), padding='same', pool_mode='avg')
-    edge = K.backend.cast(K.backend.greater(averaged_mask, 0.1), 'float32') * K.backend.cast(K.backend.less(averaged_mask, 0.5), 'float32')
+    edge = K.backend.cast(K.backend.greater(averaged_mask, min_kernel_overlay), 'float32') * K.backend.cast(K.backend.less(averaged_mask, max_kernel_overlay), 'float32')
     return edge
 
 # weight: weighted tensor(same shape with mask image)
@@ -70,13 +71,13 @@ def weighted_bce_loss(y_true, y_pred):
     weight = get_weight_matrix(y_true)
     # avoiding overflow
     epsilon = K.backend.epsilon()
-    y_pred = K.clip(y_pred, epsilon, 1. - epsilon)
-    logit_y_pred = K.log(y_pred / (1. - y_pred))
+    y_pred = K.backend.clip(y_pred, epsilon, 1. - epsilon)
+    logit_y_pred = K.backend.log(y_pred / (1. - y_pred))
 
     # https://www.tensorflow.org/api_docs/python/tf/nn/weighted_cross_entropy_with_logits
     loss = (1. - y_true) * logit_y_pred + (1. + (weight - 1.) * y_true) * \
-           (K.log(1. + K.exp(-K.abs(logit_y_pred))) + K.maximum(-logit_y_pred, 0.))
-    return K.sum(loss) / K.sum(weight)
+           (K.backend.log(1. + K.backend.exp(-K.backend.abs(logit_y_pred))) + K.backend.maximum(-logit_y_pred, 0.))
+    return K.backend.sum(loss) / K.backend.sum(weight)
 
 
 def weighted_dice_loss(y_true, y_pred):
@@ -87,7 +88,6 @@ def weighted_dice_loss(y_true, y_pred):
     score = (2. * K.sum(w * intersection) + smooth) / (K.sum(w * m1) + K.sum(w * m2) + smooth)
     loss = 1. - K.sum(score)
     return loss
-
 
 def weighted_bce_dice_loss(y_true, y_pred):
     y_true = K.cast(y_true, 'float32')
