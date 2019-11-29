@@ -63,20 +63,51 @@ def main():
         weights_numpy = K.eval(weights_tensor)#basically tensor to numpy
         weightsImage_numpy = weights_numpy[0,:,:,0]
 
-        edgeImage_50_80_numpy = getEdgeMatrix(label_tensorN)
+        edgeImage_50_80_numpy = getEdgeMatrix(label_tensorN, 0.5, 0.8)
+        edgeImage_30_80_numpy = getEdgeMatrix(label_tensorN, 0.3, 0.8)
+        edgeImage_10_80_numpy = getEdgeMatrix(label_tensorN, 0.1, 0.8)
+        edgeImage_30_60_numpy = getEdgeMatrix(label_tensorN, 0.3, 0.6)
+        edgeImage_10_50_numpy = getEdgeMatrix(label_tensorN, 0.1, 0.5)
 
         fig = plt.figure(figsize=(8, 8))
-        fig.add_subplot(2, 2, 1)
+        image_plot = fig.add_subplot(2, 4, 1)
+        image_plot.title.set_text('Image')
         plt.imshow(image, cmap='gray', vmin=0, vmax=255)
         plt.colorbar()
-        fig.add_subplot(2, 2, 2)
+
+        label_plot = fig.add_subplot(2, 4, 2)
+        label_plot.title.set_text('Label')
         plt.imshow(label, cmap='gray', vmin=0, vmax=1)
         plt.colorbar()
-        fig.add_subplot(2, 2, 3)
+
+        weight_plot = fig.add_subplot(2, 4, 3)
+        weight_plot.title.set_text('Weights')
         plt.imshow(weightsImage_numpy, cmap='viridis')
         plt.colorbar()
-        fig.add_subplot(2, 2, 4)
+
+        edge0508_plot = fig.add_subplot(2, 4, 4)
+        edge0508_plot.title.set_text('Edge >50% && <80%')
         plt.imshow(edgeImage_50_80_numpy, cmap='gray')
+        plt.colorbar()
+
+        edge0308_plot = fig.add_subplot(2, 4, 5)
+        edge0308_plot.title.set_text('Edge >30% && <80%')
+        plt.imshow(edgeImage_30_80_numpy, cmap='gray')
+        plt.colorbar()
+
+        edge0108_plot = fig.add_subplot(2, 4, 6)
+        edge0108_plot.title.set_text('Edge >10% && <80%')
+        plt.imshow(edgeImage_10_80_numpy, cmap='gray')
+        plt.colorbar()
+
+        edge0306_plot = fig.add_subplot(2, 4, 7)
+        edge0306_plot.title.set_text('Edge >30% && <60%')
+        plt.imshow(edgeImage_30_60_numpy, cmap='gray')
+        plt.colorbar()
+
+        edge0105_plot = fig.add_subplot(2, 4, 8)
+        edge0105_plot.title.set_text('Edge >10% && <50%')
+        plt.imshow(edgeImage_10_50_numpy, cmap='gray')
         plt.colorbar()
 
         plt.show()
