@@ -4,6 +4,7 @@ import numpy as np
 import keras.backend as K
 import cv2
 import glob
+import os
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
@@ -41,6 +42,14 @@ def getEdgeMatrix(label_tensorN, min_overlay = 0.5, max_overlay = 0.8):
     edgeImage_numpy = edge_numpy[0, :, :, 0]
     return edgeImage_numpy
 
+def drawAndSaveGraph(image, colorspace, min_value, max_value, name, path):
+    fig = plt.figure(figsize=(8, 8))
+    plt.imshow(image, cmap=colorspace, vmin=min_value, vmax=max_value)
+    plt.colorbar()
+    plt.savefig(path + name + '.bmp', dpi=400)
+    plt.show()
+    plt.close('all')
+
 def main():
     # image path
     data_input = "E:/RoadCracksInspection/datasets/Set_0/Train/"
@@ -53,6 +62,7 @@ def main():
     for i in range(0, len(images)):
         image = cv2.imread(images[i], cv2.IMREAD_GRAYSCALE)
         label = cv2.imread(labels[i], cv2.IMREAD_GRAYSCALE)
+        file_name = os.path.splitext(os.path.basename(images[i]))[0]
         #make tensor
         label_tensor = image2tensor(label)
         image_tensor = image2tensor(image)
@@ -74,6 +84,11 @@ def main():
         image_plot.title.set_text('Image')
         plt.imshow(image, cmap='gray', vmin=0, vmax=255)
         plt.colorbar()
+
+        basePath = 'C:/Users/DeepLearningRig/Desktop/outputs/'
+        imageSavePath = basePath + 'images/'
+
+        drawAndSaveGraph(image, 'gray', 0, 255, file_name, imageSavePath)
 
         label_plot = fig.add_subplot(2, 4, 2)
         label_plot.title.set_text('Label')
