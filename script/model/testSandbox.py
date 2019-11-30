@@ -7,6 +7,7 @@ import glob
 import os
 import matplotlib.pyplot as plt
 import tensorflow as tf
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def image2tensor(image):
     image_shape = image.shape
@@ -42,17 +43,31 @@ def getEdgeMatrix(label_tensorN, min_overlay = 0.5, max_overlay = 0.8):
     edgeImage_numpy = edge_numpy[0, :, :, 0]
     return edgeImage_numpy
 
-def drawAndSaveGraph(image, colorspace, min_value, max_value, name, path):
+def plotWeightsMatrix(image, name, path):
     fig = plt.figure(figsize=(8, 8))
-    plt.imshow(image, cmap=colorspace, vmin=min_value, vmax=max_value)
+    plt.title.set_text(name)
+    plt.imshow(image, cmap='viridis')
     plt.colorbar()
-    plt.savefig(path + name + '.bmp', dpi=400)
     plt.show()
-    plt.close('all')
+
+def plotGrayscaleMatrix(image, name, path):
+    fig = plt.figure(figsize=(8, 8))
+    plt.title.set_text(name)
+    plt.imshow(image, cmap='gray', vmin=0, vmax=1)
+    plt.colorbar()
+    plt.show()
+
+def add_subplot(fig, rows, cols, pos, name, image, colorspace, min, max):
+    image_plot = fig.add_subplot(rows, cols, pos)
+    image_plot.title.set_text(name)
+    im = plt.imshow(image, cmap=colorspace, vmin=min, vmax=max)
+    divider = make_axes_locatable(image_plot)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    plt.colorbar(im, cax=cax)
 
 def main():
     # image path
-    data_input = "E:/RoadCracksInspection/datasets/Set_0/Train/"
+    data_input = "C:/Users/Rytis/Desktop/Set_0/Train/"
     images_path = data_input + 'Images/'
     labels_path = data_input + 'Labels/'
     # gather all data in image and label directories
@@ -79,16 +94,25 @@ def main():
         edgeImage_30_60_numpy = getEdgeMatrix(label_tensorN, 0.3, 0.6)
         edgeImage_10_50_numpy = getEdgeMatrix(label_tensorN, 0.1, 0.5)
 
+
         fig = plt.figure(figsize=(8, 8))
+
+        add_subplot(fig, 2, 4, 1, "Image", image, "gray", 0, 255)
+        add_subplot(fig, 2, 4, 2, "Label", label, "gray", 0, 1)
+        add_subplot(fig, 2, 4, 3, "Weights", weightsImage_numpy, "viridis", 0, 3)
+        add_subplot(fig, 2, 4, 4, "Edge >50% && <80%", edgeImage_50_80_numpy, "gray", 0, 1)
+        add_subplot(fig, 2, 4, 5, "Edge >30% && <80%", edgeImage_30_80_numpy, "gray", 0, 1)
+        add_subplot(fig, 2, 4, 6, "Edge >10% && <80%", edgeImage_10_80_numpy, "gray", 0, 1)
+        add_subplot(fig, 2, 4, 7, "Edge >30% && <60%", edgeImage_30_60_numpy, "gray", 0, 1)
+        add_subplot(fig, 2, 4, 8, "Edge >10% && <50%", edgeImage_10_50_numpy, "gray", 0, 1)
+
+        """
         image_plot = fig.add_subplot(2, 4, 1)
         image_plot.title.set_text('Image')
-        plt.imshow(image, cmap='gray', vmin=0, vmax=255)
-        plt.colorbar()
-
-        basePath = 'C:/Users/DeepLearningRig/Desktop/outputs/'
-        imageSavePath = basePath + 'images/'
-
-        drawAndSaveGraph(image, 'gray', 0, 255, file_name, imageSavePath)
+        im = plt.imshow(image, cmap='gray', vmin=0, vmax=255)
+        divider = make_axes_locatable(image_plot)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        plt.colorbar(im, cax=cax)
 
         label_plot = fig.add_subplot(2, 4, 2)
         label_plot.title.set_text('Label')
@@ -125,7 +149,10 @@ def main():
         plt.imshow(edgeImage_10_50_numpy, cmap='gray')
         plt.colorbar()
 
+        """
+
         plt.show()
+
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
