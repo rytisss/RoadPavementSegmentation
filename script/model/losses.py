@@ -12,13 +12,15 @@ class Loss(Enum):
     ACTIVECONTOURS = 2,
     SURFACEnDice = 3,
     FOCALLOSS = 4,
-    CROSSnDICE = 5,
-    WEIGHTEDCROSSENTROPY = 6,
-    WEIGHTED60CROSSENTROPY = 7,
-    WEIGHTED70CROSSENTROPY = 8,
-    CROSSENTROPY50DICE50 = 9,
-    CROSSENTROPY25DICE75 = 10,
-    CROSSENTROPY75DICE25 = 11
+    WEIGHTEDCROSSENTROPY = 5,
+    WEIGHTED60CROSSENTROPY = 6,
+    WEIGHTED70CROSSENTROPY = 7,
+    CROSSENTROPY50DICE50 = 8,
+    CROSSENTROPY25DICE75 = 9,
+    CROSSENTROPY75DICE25 = 10,
+    WEIGHTEDCROSSENTROPY50DICE50 = 11,
+    WEIGHTEDCROSSENTROPY25DICE75 = 12,
+    WEIGHTEDCROSSENTROPY75DICE25 = 13
 
 
 alpha = K.backend.variable(1.0, dtype='float32')
@@ -66,6 +68,18 @@ def binary_crossentropy(y_true, y_pred):
     loss = tf.reduce_mean(tf.keras.losses.binary_crossentropy(y_true = y_true, y_pred = y_pred, from_logits = False))
     return loss
 
+def dice_score(y_true, y_pred):
+    smooth = K.backend.epsilon()
+    y_true_f = K.backend.flatten(y_true)
+    y_pred_f = K.backend.flatten(y_pred)
+    intersection = K.backend.sum(y_true_f * y_pred_f)
+    answer = (2. * intersection + smooth) / (K.backend.sum(y_true_f) + K.backend.sum(y_pred_f) + smooth)
+    return answer
+
+def dice_loss(y_true, y_pred):
+    answer = 1. - dice_score(y_true, y_pred)
+    return answer
+
 #get weight matrix for tensor (image or images stack)
 def get_edge_matrix(y_true, min_kernel_overlay = 0.5, max_kernel_overlay = 0.8):
     y_true = K.backend.cast(y_true, 'float32')
@@ -97,6 +111,20 @@ def adjusted_weighted_bce_loss(max_kernel_overlay = 0.8):
                (K.backend.log(1. + K.backend.exp(-K.backend.abs(logit_y_pred))) + K.backend.maximum(-logit_y_pred, 0.))
         return K.backend.sum(loss) / K.backend.sum(weight)
     return adjusted_weighted_bce_loss_
+
+def cross_and_dice_loss(w_cross, w_dice):
+    def cross_and_dice_loss_(y_true, y_pred):
+        cross_entropy_value = binary_crossentropy(y_true, y_pred)
+        dice_loss_value = dice_loss(y_true, y_pred)
+        return w_dice * dice_loss_value + w_cross * cross_entropy_value
+    return cross_and_dice_loss_
+
+def weighted_cross_and_dice_loss(w_weighted_cross, w_dice):
+    def weighted_cross_and_dice_loss_(y_true, y_pred):
+        weighted_cross_entropy_value = weighted_bce_loss(y_true, y_pred)
+        dice_loss_value = dice_loss(y_true, y_pred)
+        return w_dice * dice_loss_value + w_weighted_cross * weighted_cross_entropy_value
+    return weighted_cross_and_dice_loss_
 
 # weight: weighted tensor(same shape with mask image)
 def weighted_bce_loss(y_true, y_pred):
@@ -231,20 +259,6 @@ def FocalLoss(y_true, y_pred):
 
     return -K.mean(alpha * K.pow(1. - pt_1, gamma) * K.log(pt_1)) \
            - K.mean((1 - alpha) * K.pow(pt_0, gamma) * K.log(1. - pt_0))
-
-
-def dice_score(y_true, y_pred):
-    smooth = K.backend.epsilon()
-    y_true_f = K.backend.flatten(y_true)
-    y_pred_f = K.backend.flatten(y_pred)
-    intersection = K.backend.sum(y_true_f * y_pred_f)
-    answer = (2. * intersection + smooth) / (K.backend.sum(y_true_f) + K.backend.sum(y_pred_f) + smooth)
-    return answer
-
-
-def dice_loss(y_true, y_pred):
-    answer = 1. - dice_score(y_true, y_pred)
-    return answer
 
 
 # not working
