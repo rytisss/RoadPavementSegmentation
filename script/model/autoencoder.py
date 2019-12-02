@@ -22,7 +22,6 @@ def CompileModel(model, lossFunction):
         model.compile(optimizer=Adam(lr=1e-3), loss=weighted_bce_loss, metrics=[dice_score])
     return model
 
-
 def AutoEncoder5(pretrained_weights=None,
                  input_size=(320, 480, 1),
                  kernel_size=3,

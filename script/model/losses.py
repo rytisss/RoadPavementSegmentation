@@ -49,13 +49,17 @@ def get_weight_matrix(y_true):
     #    y_true, pool_size=(11, 11), strides=(1, 1), padding='same', pool_mode='avg')
     #border = K.cast(K.greater(averaged_mask, 0.005), 'float32') * K.cast(K.less(averaged_mask, 0.995), 'float32')
     # basically finds label, (non-black) points in tensor
-    labelmatrix = K.backend.cast(K.backend.greater(y_true, 0.6), 'float32')
+    labelmatrix = K.backend.cast(K.backend.greater(y_true, 0.5), 'float32')
     weight = K.backend.ones_like(y_true)
     w0 = K.backend.sum(weight)
     weight += labelmatrix
     w1 = K.backend.sum(weight)
     weight *= (w0 / w1)
     return weight
+
+def binary_crossentropy(y_true, y_pred):
+    loss = tf.reduce_mean(tf.keras.losses.binary_crossentropy(y_true = y_true, y_pred = y_pred, from_logits = False))
+    return loss
 
 #get weight matrix for tensor (image or images stack)
 def get_edge_matrix(y_true, min_kernel_overlay = 0.5, max_kernel_overlay = 0.8):
@@ -64,7 +68,29 @@ def get_edge_matrix(y_true, min_kernel_overlay = 0.5, max_kernel_overlay = 0.8):
     averaged_mask = K.backend.pool2d(
         y_true, pool_size=(3, 3), strides=(1, 1), padding='same', pool_mode='avg')
     edge = K.backend.cast(K.backend.greater(averaged_mask, min_kernel_overlay), 'float32') * K.backend.cast(K.backend.less(averaged_mask, max_kernel_overlay), 'float32')
+    #take everything that is the label only (not outside)
+    edge *= y_true
     return edge
+
+def get_weight_matrix_with_reduced_edges(y_true, max_kernel_overlay = 0.5):
+    edge = get_edge_matrix(y_true, 0.1, max_kernel_overlay)
+    # take the edges only in the label (not outside)
+    edge *= y_true
+    label_without_edge = y_true - edge
+    return label_without_edge
+
+def adjusted_weighted_bce_loss(max_kernel_overlay = 0.8):
+    def adjusted_weighted_bce_loss_(y_true, y_pred):
+        weight = get_edge_matrix(y_true, 0.1, max_kernel_overlay)
+        # avoiding overflow
+        epsilon = K.backend.epsilon()
+        y_pred = K.backend.clip(y_pred, epsilon, 1. - epsilon)
+        logit_y_pred = K.backend.log(y_pred / (1. - y_pred))
+        # https://www.tensorflow.org/api_docs/python/tf/nn/weighted_cross_entropy_with_logits
+        loss = (1. - y_true) * logit_y_pred + (1. + (weight - 1.) * y_true) * \
+               (K.backend.log(1. + K.backend.exp(-K.backend.abs(logit_y_pred))) + K.backend.maximum(-logit_y_pred, 0.))
+        return K.backend.sum(loss) / K.backend.sum(weight)
+    return adjusted_weighted_bce_loss_
 
 # weight: weighted tensor(same shape with mask image)
 def weighted_bce_loss(y_true, y_pred):

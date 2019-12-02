@@ -98,13 +98,19 @@ def make_four_graph_stack(name_1, image_1, colorSpace_1, vmin_1, vmax_1,
     #plt.show()
 
 def get_inner_part_weight(label, edges):
-    adjusted_label = label - edges
+    adjusted_label = label * edges
     adjusted_label[adjusted_label < 0.0] = 0.0
     adjusted_label_tensor = image2tensor(adjusted_label)
     weights_tensor = get_weight_matrix(adjusted_label_tensor)
     weights_numpy = K.eval(weights_tensor)  # basically tensor to numpy
     weightsImage_numpy = weights_numpy[0, :, :, 0]
     return weightsImage_numpy
+
+def get_weights_without_edges(label, max_overlay = 0.5):
+    edge = get_weight_matrix_with_reduced_edges(label, max_overlay)
+    edge_numpy = K.eval(edge)  # basically tensor to numpy
+    edge_numpy = edge_numpy[0,:,:,0]
+    return edge_numpy
 
 def main():
     # image path
@@ -141,8 +147,8 @@ def main():
                               base_output_path + file_name + '_edges_less_1.png')
 
         # calculate weights
-        edgeImage_30_90_numpy = getEdgeMatrix(label_tensorN, 0.3, 0.9)
-        edgeImage_30_90_numpy = edgeImage_30_90_numpy * labelN #leave only edge that is in the label
+        edgeImage_30_90_numpy = getEdgeMatrix(label_tensorN, 0.1, 0.9)
+        #edgeImage_30_90_numpy = edgeImage_30_90_numpy * labelN #leave only edge that is in the label
         innerWeight_30_90_numpy = get_inner_part_weight(labelN, edgeImage_30_90_numpy)
         make_four_graph_stack("Image", image, "gray", 0, 255,
                               "Label", label, "gray", 0, 1,
@@ -151,8 +157,8 @@ def main():
                               base_output_path + file_name + '_edges_less_90.png')
 
         # calculate weights
-        edgeImage_30_80_numpy = getEdgeMatrix(label_tensorN, 0.3, 0.8)
-        edgeImage_30_80_numpy = edgeImage_30_80_numpy * labelN  # leave only edge that is in the label
+        edgeImage_30_80_numpy = getEdgeMatrix(label_tensorN, 0.1, 0.8)
+        #edgeImage_30_80_numpy = edgeImage_30_80_numpy * labelN  # leave only edge that is in the label
         innerWeight_30_80_numpy = get_inner_part_weight(labelN, edgeImage_30_80_numpy)
         make_four_graph_stack("Image", image, "gray", 0, 255,
                               "Label", label, "gray", 0, 1,
@@ -161,8 +167,8 @@ def main():
                               base_output_path + file_name + '_edges_less_80.png')
 
         # calculate weights
-        edgeImage_30_70_numpy = getEdgeMatrix(label_tensorN, 0.3, 0.7)
-        edgeImage_30_70_numpy = edgeImage_30_70_numpy * labelN  # leave only edge that is in the label
+        edgeImage_30_70_numpy = getEdgeMatrix(label_tensorN, 0.1, 0.7)
+        #edgeImage_30_70_numpy = edgeImage_30_70_numpy * labelN  # leave only edge that is in the label
         innerWeight_30_70_numpy = get_inner_part_weight(labelN, edgeImage_30_70_numpy)
         make_four_graph_stack("Image", image, "gray", 0, 255,
                               "Label", label, "gray", 0, 1,
@@ -171,8 +177,8 @@ def main():
                               base_output_path + file_name + '_edges_less_70.png')
 
         # calculate weights
-        edgeImage_30_60_numpy = getEdgeMatrix(label_tensorN, 0.3, 0.6)
-        edgeImage_30_60_numpy = edgeImage_30_60_numpy * labelN  # leave only edge that is in the label
+        edgeImage_30_60_numpy = getEdgeMatrix(label_tensorN, 0.1, 0.6)
+        #edgeImage_30_60_numpy = edgeImage_30_60_numpy * labelN  # leave only edge that is in the label
         innerWeight_30_60_numpy = get_inner_part_weight(labelN, edgeImage_30_60_numpy)
         make_four_graph_stack("Image", image, "gray", 0, 255,
                               "Label", label, "gray", 0, 1,
@@ -181,8 +187,8 @@ def main():
                               base_output_path + file_name + '_edges_less_60.png')
 
         # calculate weights
-        edgeImage_30_50_numpy = getEdgeMatrix(label_tensorN, 0.3, 0.5)
-        edgeImage_30_50_numpy = edgeImage_30_50_numpy * labelN  # leave only edge that is in the label
+        edgeImage_30_50_numpy = getEdgeMatrix(label_tensorN, 0.1, 0.5)
+        #edgeImage_30_50_numpy = edgeImage_30_50_numpy * labelN  # leave only edge that is in the label
         innerWeight_30_50_numpy = get_inner_part_weight(labelN, edgeImage_30_50_numpy)
         make_four_graph_stack("Image", image, "gray", 0, 255,
                               "Label", label, "gray", 0, 1,
