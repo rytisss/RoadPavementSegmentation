@@ -82,7 +82,8 @@ def get_weight_matrix_with_reduced_edges(y_true, max_kernel_overlay = 0.5):
     # take the edges only in the label (not outside)
     edge *= y_true
     label_without_edge = y_true - edge
-    return label_without_edge
+    weight = get_weight_matrix(label_without_edge)
+    return weight
 
 def adjusted_weighted_bce_loss(max_kernel_overlay = 0.8):
     def adjusted_weighted_bce_loss_(y_true, y_pred):
