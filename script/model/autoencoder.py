@@ -4,12 +4,20 @@ from script.model.losses import *
 from script.model.layers import *
 from keras.optimizers import *
 from keras.utils.vis_utils import plot_model
+"""
+WEIGHTED60CROSSENTROPY = 7,
+    WEIGHTED70CROSSENTROPY = 8,
+    CROSSENTROPY50DICE50 = 9,
+    CROSSENTROPY25DICE75 = 10,
+    CROSSENTROPY25DICE75 = 11
+    """
+
 
 def CompileModel(model, lossFunction):
     if lossFunction == Loss.DICE:
         model.compile(optimizer=Adam(lr=1e-3), loss=dice_loss, metrics=[dice_score])
     elif lossFunction == Loss.CROSSENTROPY:
-        model.compile(optimizer=Adam(lr=1e-3), loss='binary_crossentropy', metrics=[dice_score])
+        model.compile(optimizer=Adam(lr=1e-3), loss=binary_crossentropy, metrics=[dice_score])
     elif lossFunction == Loss.ACTIVECONTOURS:
         model.compile(optimizer=Adam(lr=1e-3), loss=Active_Contour_Loss, metrics=[dice_score])
     elif lossFunction == Loss.SURFACEnDice:
@@ -20,6 +28,10 @@ def CompileModel(model, lossFunction):
         model.compile(optimizer=Adam(lr=1e-3), loss=weighted_bce_dice_loss, metrics=[dice_score])
     elif lossFunction == Loss.WEIGHTEDCROSSENTROPY:
         model.compile(optimizer=Adam(lr=1e-3), loss=weighted_bce_loss, metrics=[dice_score])
+    elif lossFunction == Loss.WEIGHTED60CROSSENTROPY:
+        model.compile(optimizer=Adam(lr=1e-3), loss=adjusted_weighted_bce_loss(0.6), metrics=[dice_score])
+    elif lossFunction == Loss.WEIGHTED70CROSSENTROPY:
+        model.compile(optimizer=Adam(lr=1e-3), loss=adjusted_weighted_bce_loss(0.7), metrics=[dice_score])
     return model
 
 def AutoEncoder5(pretrained_weights=None,

@@ -13,7 +13,12 @@ class Loss(Enum):
     SURFACEnDice = 3,
     FOCALLOSS = 4,
     CROSSnDICE = 5,
-    WEIGHTEDCROSSENTROPY = 6
+    WEIGHTEDCROSSENTROPY = 6,
+    WEIGHTED60CROSSENTROPY = 7,
+    WEIGHTED70CROSSENTROPY = 8,
+    CROSSENTROPY50DICE50 = 9,
+    CROSSENTROPY25DICE75 = 10,
+    CROSSENTROPY75DICE25 = 11
 
 
 alpha = K.backend.variable(1.0, dtype='float32')
@@ -81,7 +86,7 @@ def get_weight_matrix_with_reduced_edges(y_true, max_kernel_overlay = 0.5):
 
 def adjusted_weighted_bce_loss(max_kernel_overlay = 0.8):
     def adjusted_weighted_bce_loss_(y_true, y_pred):
-        weight = get_edge_matrix(y_true, 0.1, max_kernel_overlay)
+        weight = get_weight_matrix_with_reduced_edges(y_true, max_kernel_overlay)
         # avoiding overflow
         epsilon = K.backend.epsilon()
         y_pred = K.backend.clip(y_pred, epsilon, 1. - epsilon)

@@ -13,7 +13,7 @@ data_gen_args = dict(rotation_range=0.0,
                     fill_mode='nearest')
 
 for setNumber in range(0, 5):
-    configs = ['l4k32AutoEncoder4_5x5Dice0.001_']
+    configs = ['l4k32AutoEncoder4_5x5Weighted60CrossEntropy_0_0.001_']
     configNumber = 1
     for config in configs:
         #configName = 'l5k16Dice_1'
