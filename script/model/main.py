@@ -28,16 +28,16 @@ data_gen_args = dict(rotation_range=0.0,
 
 learningRate = 0.001
 kernels = 32
-setNumber = 0
+setNumber = 1
 
 #outputDir = 'E:/RoadCracksInspection/trainingOutput/Set_' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4_5x5WeightCross' + str(learningRate) + '_' + str(setNumber) +'/'
-outputDir = 'C:/src/Set_' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4_5x5CROSSENTROPY25DICE75_0_' + str(learningRate) + '_' + str(setNumber)+'/'
+outputDir = 'C:/src/Set_' + str(setNumber) + '/l4k' + str(kernels) + 'AutoEncoder4_5x5_CROSSENTROPY50DICE50_SEQ_0_' + str(learningRate) + '_' + str(setNumber)+'/'
 if not os.path.exists(outputDir):
     print('Output directory doesnt exist!\n')
     print('It will be created!\n')
     os.makedirs(outputDir)
-generator = trainGenerator(4,'E:/RoadCracksInspection/datasets/Set_' + str(setNumber) + '/Train/AUGM/','Images','Labels',data_gen_args,save_to_dir = None, target_size = (320,480))
-model = AutoEncoder4_5x5(number_of_kernels=kernels,input_size = (320,480,1), loss_function = Loss.CROSSENTROPY25DICE75)
+generator = trainGenerator(4,'E:/RoadCracksInspection/datasets_seq/Set_' + str(setNumber) + '/Train/Augm/','Images','Labels',data_gen_args,save_to_dir = None, target_size = (320,480))
+model = AutoEncoder4_5x5(number_of_kernels=kernels,input_size = (320,480,1), loss_function = Loss.CROSSENTROPY50DICE50)
 outputPath = outputDir + "AutoEncoder4_5x5-{epoch:03d}-{loss:.4f}.hdf5"
 #scheduler = AlphaScheduler()
 model_checkpoint = ModelCheckpoint(outputPath, monitor='loss',verbose=1, save_best_only=False, save_weights_only=False)

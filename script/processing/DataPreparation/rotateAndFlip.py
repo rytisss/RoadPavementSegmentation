@@ -2,14 +2,14 @@ import os
 import glob
 import cv2
 import numpy as np
-from augmentationTool import AugmentationTool
+from script.processing.DataPreparation.augmentationTool import AugmentationTool
 import random
 
 def saveImage(image, outputPath, name, prefix):
     cv2.imwrite(outputPath + name + prefix + '.bmp', image)
 
 def main():
-    inputDir = 'E:/RoadCracksInspection/datasets80-20/Set_0/Train/'
+    inputDir = 'E:/RoadCracksInspection/crackForestDataset/SeparatedDataset/Set_4/Train/'
     imageDir = inputDir + 'Images/'
     labelDir = inputDir + 'Labels/'
 
@@ -46,6 +46,7 @@ def main():
 
         #rotation 0
         frontName = str(random.randint(0,1000)) + '_'
+        frontName = ''#elimination of random number
         print("Random: " + frontName)
         saveImage(image, outputImageDir, frontName + imageName, '_rot0')
         saveImage(label, outputLabelDir, frontName + labelName, '_rot0')
@@ -54,6 +55,7 @@ def main():
         image180 = AugmentationTool.RotateImage(image, 180)
         label180 = AugmentationTool.RotateImage(label, 180)
         frontName = str(random.randint(0,1000))+ '_'
+        frontName = ''#elimination of random number
         print("Random: " + frontName)
         saveImage(image180, outputImageDir, frontName + imageName, '_rot180')
         saveImage(label180, outputLabelDir, frontName + labelName, '_rot180')
@@ -62,6 +64,7 @@ def main():
         imageflip = AugmentationTool.FlipImageHorizontally(image)
         labelflip = AugmentationTool.FlipImageHorizontally(label)
         frontName = str(random.randint(0,1000))+ '_'
+        frontName = ''  # elimination of random number
         print("Random: " + frontName)
         saveImage(imageflip, outputImageDir, frontName + imageName, '_flip')
         saveImage(labelflip, outputLabelDir, frontName + labelName, '_flip')
@@ -72,6 +75,7 @@ def main():
         imagefliprot180 = AugmentationTool.RotateImage(imageflip, 180)
         labelfliprot180 = AugmentationTool.RotateImage(labelflip, 180)
         frontName = str(random.randint(0,1000))+ '_'
+        frontName = ''  # elimination of random number
         print("Random: " + frontName)
         saveImage(imagefliprot180, outputImageDir, frontName + imageName, '_flip_rot180')
         saveImage(labelfliprot180, outputLabelDir, frontName + labelName, '_flip_rot180')
