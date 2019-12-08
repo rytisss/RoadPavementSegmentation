@@ -70,17 +70,19 @@ def add_subplot(fig, rows, cols, pos, name, image, colorspace, min, max):
         #sum_pixels = foreground_pixel_count + defect_pixel_count
         defect_size_ratio = (float)(defect_pixel_count) / (float)(foreground_pixel_count + defect_pixel_count)
         defect_size_ratio_perc = round(defect_size_ratio * 100.0, 4)
-        info = 'foregroundW = ' + str(round(foreground_weight, 4)) + ', defectW = ' + str(round(defect_weight, 4)) + ', Area = ' + str(defect_size_ratio_perc) + '%'
+        info = 'background_w = ' + str(round(foreground_weight, 4)) + ', defect_w = ' + str(round(defect_weight, 4)) + ', Area = ' + str(defect_size_ratio_perc) + '%'
         #add text top left
         image_plot.text(10, 20, info, style='italic',
                 bbox={'facecolor': 'red', 'alpha': 0.6, 'pad': 5})
 
-        im = plt.imshow(image, cmap=colorspace)
+        im = plt.imshow(image, cmap=colorspace, vmin=0.9, vmax=2.0)
     else:
         im = plt.imshow(image, cmap=colorspace, vmin=min, vmax=max)
     divider = make_axes_locatable(image_plot)
     cax = divider.append_axes("right", size="5%", pad=0.05)
     plt.colorbar(im, cax=cax)
+
+
 
 def make_four_graph_stack(name_1, image_1, colorSpace_1, vmin_1, vmax_1,
                           name_2, image_2, colorSpace_2, vmin_2, vmax_2,
@@ -96,6 +98,13 @@ def make_four_graph_stack(name_1, image_1, colorSpace_1, vmin_1, vmax_1,
     plt.savefig(save_path)
     plt.close(fig)
     #plt.show()
+
+def make_single_graph(name, image, colorSpace, vmin, vmax, save_path):
+    fig = plt.figure(figsize=(6.6, 4.8))
+    add_subplot(fig, 1, 1, 1, name, image, colorSpace, vmin, vmax)
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close(fig)
 
 def get_inner_part_weight(label, edges):
     adjusted_label = label * edges
@@ -195,6 +204,36 @@ def main():
                               "Edges [3x3 kernel fill < 50%]", edgeImage_30_50_numpy, "gray", 0, 1,
                               "Weights", innerWeight_30_50_numpy, "viridis", float('nan'), float('nan'),
                               base_output_path + file_name + '_edges_less_50.png')
+
+
+        #save single diagrams separately
+        #change output for separate diagrams
+        base_output_path = 'C:/src/figs_separate/'
+
+        make_single_graph("Image", image, "gray", 0, 255, base_output_path + file_name + '_image.png')
+        make_single_graph("Label", label, "gray", 0, 1, base_output_path + file_name + '_label.png')
+        make_single_graph("Edges [3x3 kernel fill < 50%]", edgeImage_30_50_numpy, "gray", 0, 1, base_output_path + file_name + '_edges_50.png')
+        make_single_graph("Weights", innerWeight_30_50_numpy, "viridis", float('nan'), float('nan'), base_output_path + file_name + '_weights_50.png')
+        make_single_graph("Edges [3x3 kernel fill < 60%]", edgeImage_30_60_numpy, "gray", 0, 1,
+                          base_output_path + file_name + '_edges_60.png')
+        make_single_graph("Weights [3x3 kernel fill < 60%]", innerWeight_30_60_numpy, "viridis", float('nan'), float('nan'),
+                          base_output_path + file_name + '_weights_60.png')
+        make_single_graph("Edges [3x3 kernel fill < 70%]", edgeImage_30_70_numpy, "gray", 0, 1,
+                          base_output_path + file_name + '_edges_70.png')
+        make_single_graph("Weights [3x3 kernel fill < 70%]", innerWeight_30_70_numpy, "viridis", float('nan'), float('nan'),
+                          base_output_path + file_name + '_weights_70.png')
+        make_single_graph("Edges [3x3 kernel fill < 80%]", edgeImage_30_80_numpy, "gray", 0, 1,
+                          base_output_path + file_name + '_edges_80.png')
+        make_single_graph("Weights [3x3 kernel fill < 80%]", innerWeight_30_80_numpy, "viridis", float('nan'), float('nan'),
+                          base_output_path + file_name + '_weights_80.png')
+        make_single_graph("Edges [3x3 kernel fill < 90%]", edgeImage_30_90_numpy, "gray", 0, 1,
+                          base_output_path + file_name + '_edges_90.png')
+        make_single_graph("Weights [3x3 kernel fill < 90%]", innerWeight_30_90_numpy, "viridis", float('nan'), float('nan'),
+                          base_output_path + file_name + '_weights_90.png')
+
+
+        #render separately
+
 
 
         """
