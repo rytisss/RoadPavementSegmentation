@@ -39,15 +39,15 @@ class Benchmark:
         self.diceList.append(dice)
 
     def Clear(self):
-        minAreaFilter = 0
-        trainingDiceList.Clear()
-        accuracyList.Clear()
-        precisionList.Clear()
-        recallList.Clear()
-        iouList.Clear()
-        f1List.Clear()
-        diceList.Clear()
-        epochNumbersList.clear()
+        self.minAreaFilter = 0
+        self.trainingDiceList.Clear()
+        self.accuracyList.Clear()
+        self.precisionList.Clear()
+        self.recallList.Clear()
+        self.iouList.Clear()
+        self.f1List.Clear()
+        self.diceList.Clear()
+        self.epochNumbersList.clear()
     
     def GetBestAccuracy(self):
         accuracy, epoch = self.GetBiggestParameterAndIndex(self.accuracyList)
