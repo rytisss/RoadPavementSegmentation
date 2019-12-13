@@ -123,7 +123,7 @@ def get_weights_without_edges(label, max_overlay = 0.5):
 
 def main():
     # image path
-    data_input = "C:/Users/Rytis/Desktop/Set_0/Train/"
+    data_input = "C:/Users/Rytis/Desktop/Set_0/"
     images_path = data_input + 'Images/'
     labels_path = data_input + 'Labels/'
     # gather all data in image and label directories
@@ -212,8 +212,10 @@ def main():
 
         make_single_graph("Image", image, "gray", 0, 255, base_output_path + file_name + '_image.png')
         make_single_graph("Label", label, "gray", 0, 1, base_output_path + file_name + '_label.png')
+        make_single_graph("Weights", weightsImage_numpy, "viridis", float('nan'),
+                          float('nan'), base_output_path + file_name + '_weights.png')
         make_single_graph("Edges [3x3 kernel fill < 50%]", edgeImage_30_50_numpy, "gray", 0, 1, base_output_path + file_name + '_edges_50.png')
-        make_single_graph("Weights", innerWeight_30_50_numpy, "viridis", float('nan'), float('nan'), base_output_path + file_name + '_weights_50.png')
+        make_single_graph("Weights [3x3 kernel fill < 50%]", innerWeight_30_50_numpy, "viridis", float('nan'), float('nan'), base_output_path + file_name + '_weights_50.png')
         make_single_graph("Edges [3x3 kernel fill < 60%]", edgeImage_30_60_numpy, "gray", 0, 1,
                           base_output_path + file_name + '_edges_60.png')
         make_single_graph("Weights [3x3 kernel fill < 60%]", innerWeight_30_60_numpy, "viridis", float('nan'), float('nan'),
