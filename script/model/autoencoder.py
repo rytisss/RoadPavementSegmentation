@@ -21,7 +21,7 @@ def CompileModel(model, lossFunction):
     elif lossFunction == Loss.ACTIVECONTOURS:
         model.compile(optimizer=Adam(lr=1e-3), loss=Active_Contour_Loss, metrics=[dice_score])
     elif lossFunction == Loss.SURFACEnDice:
-        model.compile(optimizer=Adam(lr=1e-3), loss=surface_loss, metrics=[dice_score])
+        model.compile(optimizer=Adam(lr=1e-3), loss=surficenDiceLoss, metrics=[dice_score])
     elif lossFunction == Loss.FOCALLOSS:
         model.compile(optimizer=Adam(lr=5e-3), loss=FocalLoss, metrics=[dice_score])
     elif lossFunction == Loss.WEIGHTEDCROSSENTROPY:

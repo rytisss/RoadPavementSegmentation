@@ -20,7 +20,7 @@ def GetFileName(path):
 
 def AnalyzeArchitecture():
     #do analysis for every class
-    trainings = 'C:/src/Set_1/'
+    trainings = 'C:/src/Set_4/'
     allScores = open(trainings + 'allScores.txt','w')
 
     inputDirs = glob.glob(trainings + '*/')
@@ -65,8 +65,8 @@ def AnalyzeArchitecture():
                     os.makedirs(imageOutputDirectory)
             
                 """
-            imagePath = 'E:/RoadCracksInspection/datasets/Set_1/Test/Images/'
-            labelsPath = 'E:/RoadCracksInspection/datasets/Set_1/Test/Labels/'
+            imagePath = 'E:/RoadCracksInspection/datasets/Set_4/Test/Images/'
+            labelsPath = 'E:/RoadCracksInspection/datasets/Set_4/Test/Labels/'
             images = glob.glob(imagePath + '*.bmp')
             labels = glob.glob(labelsPath + '*.bmp')  
             predictions = glob.glob(inputPredictionSubDir + '*.bmp')      
