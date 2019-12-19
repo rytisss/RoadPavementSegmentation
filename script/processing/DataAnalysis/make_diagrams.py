@@ -24,7 +24,7 @@ def makeGraph(x, y):
 
 
 def main():
-    architecturesInputDir = 'D:/CracksTrainings/Set_1/'
+    architecturesInputDir = 'D:/CracksTrainings/Set_2/'
     # Get subdirectories of all architectures
     inputArchitecturesSubDirs = glob.glob(architecturesInputDir + '*/')
     x = []
