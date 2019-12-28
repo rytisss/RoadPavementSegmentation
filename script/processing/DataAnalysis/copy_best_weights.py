@@ -22,6 +22,7 @@ def copy_files(source, destination):
 def main():
     sets = ['Set_0', 'Set_1', 'Set_2', 'Set_3', 'Set_4']
     for set in sets:
+        print('\n' + set + '\n')
         architecturesInputDir = 'D:/CracksTrainings/' + set + '/'
         outputDir = 'D:/CrackTrainings_best/' + set + '/'
         # Get subdirectories of all architectures
@@ -46,7 +47,8 @@ def main():
             directory_names.append(dir_name)
             score, epoch = currentBenchmark.GetBestDice()
             dice_scores.append(score)
-            epoch_number.append(epoch)
+            epoch_number.append(epoch + 1)
+            #add 1 cause epoch starts to count from 1
             full_path = inputArchitectureSurDir + 'prediction//' + str(epoch) + '//'
             full_paths.append(full_path)
             # make subdirectory in the output directory

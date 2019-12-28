@@ -24,6 +24,30 @@ def render_border(image):
     cv2.rectangle(image, (0,0), (height - 1, width - 1), 0, 1)
     return image
 
+def get_centered_rectangle_p(left, top, right, bottom):
+    roi = [left, top, right, bottom]
+    return get_centered_rectangle(roi)
+
+def get_centered_rectangle(rectangle):
+    width = 50
+    height = 50
+    left = rectangle[0]
+    top = rectangle[1]
+    right = rectangle[2]
+    bottom = rectangle[3]
+    center_x = ((left + right) / 2)
+    center_y = ((top + bottom) / 2)
+    centered_rect_left = (int)(center_x - width / 2)
+    centered_rect_right = (int)(center_x + width / 2)
+    centered_rect_top = (int)(center_y - height / 2)
+    centered_rect_bottom = (int)(center_y + height / 2)
+    centered_rect = []
+    centered_rect.append(centered_rect_left)
+    centered_rect.append(centered_rect_top)
+    centered_rect.append(centered_rect_right)
+    centered_rect.append(centered_rect_bottom)
+    return centered_rect
+
 def render_regions(image, rois):
     for i in range(0, (int)(len(rois) / 4)):
         left = rois[i * 4 + 0]
@@ -59,7 +83,7 @@ def save_crop(path, left, top, right, bottom, image, label, image_crop, label_cr
     rendered_crop_label_bad = render_border(rendered_crop_label_bad)
     #good region
     outer_color = (0, 200, 0)
-    inner_color = (0, 70, 0)
+    inner_color = (0, 40, 0)
     rendered_crop_label_good = Render.Defects(image_crop, label_crop, outer_color, inner_color)
     rendered_crop_label_good = render_border(rendered_crop_label_good)
     #render border to image crop and label crop
@@ -70,6 +94,7 @@ def save_crop(path, left, top, right, bottom, image, label, image_crop, label_cr
 
     print('saving...')
     image = render_border(image)
+    image = render_regions(image, rois)
     cv2.imwrite(path + 'image.bmp', image)
     label = render_border(label)
     cv2.imwrite(path + 'label.bmp', label)
@@ -126,8 +151,16 @@ def mouse_event(event, x, y, flags, params):
             y0 = first_pt[0]
             y1 = second_pt[0]
 
+        center_roi = get_centered_rectangle_p(x0, y0, x1, y1)
+        #assign centered roi
+        x0 = center_roi[0]
+        y0 = center_roi[1]
+        x1 = center_roi[2]
+        y1 = center_roi[3]
+
         crop_width = x1 - x0
         crop_height = y1 - y0
+
         crop_image = image[x0:x1, y0:y1]
         crop_image = cv2.resize(crop_image, (crop_height * resize_ratio, crop_width * resize_ratio), interpolation=cv2.INTER_NEAREST)
         crop_label = label[x0:x1, y0:y1]
@@ -154,14 +187,17 @@ def mouse_event(event, x, y, flags, params):
         #preview window
         preview = np.copy(image)
         cv2.rectangle(preview, first_pt, current_pos, 0, 1)
+        #additionally draw centered roi
+        centered_roi = get_centered_rectangle_p(first_pt[0], first_pt[1], current_pos[0], current_pos[1])
+        cv2.rectangle(preview, (centered_roi[0], centered_roi[1]), (centered_roi[2], centered_roi[3]), 50, 1)
         cv2.imshow(preview_window, preview)
         cv2.waitKey(1)
 
 #################################################
 #gather all images
 
-imagesPath = 'C:/Users\Rytis/Desktop/Set_0/Train/shuffled/AUGM/Images/'
-labelsPath = 'C:/Users\Rytis/Desktop/Set_0/Train/shuffled/AUGM/Labels/'
+imagesPath = 'C:/Users\Rytis/Desktop/Set_0/Images/'
+labelsPath = 'C:/Users\Rytis/Desktop/Set_0/Labels/'
 images = glob.glob(imagesPath + '*.bmp')
 labels = glob.glob(labelsPath + '*.bmp')
 

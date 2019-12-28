@@ -54,7 +54,7 @@ def plotWeightsMatrix(image, name, path):
 def plotGrayscaleMatrix(image, name, path):
     fig = plt.figure(figsize=(8, 8))
     plt.title.set_text(name)
-    plt.imshow(image, cmap='gray', vmin=0, vmax=1)
+    plt.imshow(image, cmap='gray_r', vmin=0, vmax=1)
     plt.colorbar()
     plt.show()
 
@@ -150,8 +150,8 @@ def main():
         base_output_path = 'C:/src/figs/'
 
         make_four_graph_stack("Image", image, "gray", 0, 255,
-                              "Label", label, "gray", 0, 1,
-                              "Edges_empty", emptyImage, "gray", 0, 1,
+                              "Label", label, "gray_r", 0, 1,
+                              "Edges_empty", emptyImage, "gray_r", 0, 1,
                               "Weights", weightsImage_numpy, "viridis", float('nan'), float('nan'),
                               base_output_path + file_name + '_edges_less_1.png')
 
@@ -160,8 +160,8 @@ def main():
         #edgeImage_30_90_numpy = edgeImage_30_90_numpy * labelN #leave only edge that is in the label
         innerWeight_30_90_numpy = get_weights_without_edges(label_tensorN, 0.9)
         make_four_graph_stack("Image", image, "gray", 0, 255,
-                              "Label", label, "gray", 0, 1,
-                              "Edges [3x3 kernel fill < 90%]", edgeImage_30_90_numpy, "gray", 0, 1,
+                              "Label", label, "gray_r", 0, 1,
+                              "Edges [3x3 kernel fill < 90%]", edgeImage_30_90_numpy, "gray_r", 0, 1,
                               "Weights", innerWeight_30_90_numpy, "viridis", float('nan'), float('nan'),
                               base_output_path + file_name + '_edges_less_90.png')
 
@@ -170,8 +170,8 @@ def main():
         #edgeImage_30_80_numpy = edgeImage_30_80_numpy * labelN  # leave only edge that is in the label
         innerWeight_30_80_numpy = get_weights_without_edges(label_tensorN, 0.8)
         make_four_graph_stack("Image", image, "gray", 0, 255,
-                              "Label", label, "gray", 0, 1,
-                              "Edges [3x3 kernel fill < 80%]", edgeImage_30_80_numpy, "gray", 0, 1,
+                              "Label", label, "gray_r", 0, 1,
+                              "Edges [3x3 kernel fill < 80%]", edgeImage_30_80_numpy, "gray_r", 0, 1,
                               "Weights", innerWeight_30_80_numpy, "viridis", float('nan'), float('nan'),
                               base_output_path + file_name + '_edges_less_80.png')
 
@@ -180,8 +180,8 @@ def main():
         #edgeImage_30_70_numpy = edgeImage_30_70_numpy * labelN  # leave only edge that is in the label
         innerWeight_30_70_numpy = get_weights_without_edges(label_tensorN, 0.7)
         make_four_graph_stack("Image", image, "gray", 0, 255,
-                              "Label", label, "gray", 0, 1,
-                              "Edges [3x3 kernel fill < 70%]", edgeImage_30_70_numpy, "gray", 0, 1,
+                              "Label", label, "gray_r", 0, 1,
+                              "Edges [3x3 kernel fill < 70%]", edgeImage_30_70_numpy, "gray_r", 0, 1,
                               "Weights", innerWeight_30_70_numpy, "viridis", float('nan'), float('nan'),
                               base_output_path + file_name + '_edges_less_70.png')
 
@@ -190,8 +190,8 @@ def main():
         #edgeImage_30_60_numpy = edgeImage_30_60_numpy * labelN  # leave only edge that is in the label
         innerWeight_30_60_numpy = get_weights_without_edges(label_tensorN, 0.6)
         make_four_graph_stack("Image", image, "gray", 0, 255,
-                              "Label", label, "gray", 0, 1,
-                              "Edges [3x3 kernel fill < 60%]", edgeImage_30_60_numpy, "gray", 0, 1,
+                              "Label", label, "gray_r", 0, 1,
+                              "Edges [3x3 kernel fill < 60%]", edgeImage_30_60_numpy, "gray_r", 0, 1,
                               "Weights", innerWeight_30_60_numpy, "viridis", float('nan'), float('nan'),
                               base_output_path + file_name + '_edges_less_60.png')
 
@@ -200,8 +200,8 @@ def main():
         #edgeImage_30_50_numpy = edgeImage_30_50_numpy * labelN  # leave only edge that is in the label
         innerWeight_30_50_numpy = get_weights_without_edges(label_tensorN, 0.5)
         make_four_graph_stack("Image", image, "gray", 0, 255,
-                              "Label", label, "gray", 0, 1,
-                              "Edges [3x3 kernel fill < 50%]", edgeImage_30_50_numpy, "gray", 0, 1,
+                              "Label", label, "gray_r", 0, 1,
+                              "Edges [3x3 kernel fill < 50%]", edgeImage_30_50_numpy, "gray_r", 0, 1,
                               "Weights", innerWeight_30_50_numpy, "viridis", float('nan'), float('nan'),
                               base_output_path + file_name + '_edges_less_50.png')
 
@@ -211,24 +211,24 @@ def main():
         base_output_path = 'C:/src/figs_separate/'
 
         make_single_graph("Image", image, "gray", 0, 255, base_output_path + file_name + '_image.png')
-        make_single_graph("Label", label, "gray", 0, 1, base_output_path + file_name + '_label.png')
+        make_single_graph("Label", label, "gray_r", 0, 1, base_output_path + file_name + '_label.png')
         make_single_graph("Weights", weightsImage_numpy, "viridis", float('nan'),
                           float('nan'), base_output_path + file_name + '_weights.png')
-        make_single_graph("Edges [3x3 kernel fill < 50%]", edgeImage_30_50_numpy, "gray", 0, 1, base_output_path + file_name + '_edges_50.png')
+        make_single_graph("Edges [3x3 kernel fill < 50%]", edgeImage_30_50_numpy, "gray_r", 0, 1, base_output_path + file_name + '_edges_50.png')
         make_single_graph("Weights [3x3 kernel fill < 50%]", innerWeight_30_50_numpy, "viridis", float('nan'), float('nan'), base_output_path + file_name + '_weights_50.png')
-        make_single_graph("Edges [3x3 kernel fill < 60%]", edgeImage_30_60_numpy, "gray", 0, 1,
+        make_single_graph("Edges [3x3 kernel fill < 60%]", edgeImage_30_60_numpy, "gray_r", 0, 1,
                           base_output_path + file_name + '_edges_60.png')
         make_single_graph("Weights [3x3 kernel fill < 60%]", innerWeight_30_60_numpy, "viridis", float('nan'), float('nan'),
                           base_output_path + file_name + '_weights_60.png')
-        make_single_graph("Edges [3x3 kernel fill < 70%]", edgeImage_30_70_numpy, "gray", 0, 1,
+        make_single_graph("Edges [3x3 kernel fill < 70%]", edgeImage_30_70_numpy, "gray_r", 0, 1,
                           base_output_path + file_name + '_edges_70.png')
         make_single_graph("Weights [3x3 kernel fill < 70%]", innerWeight_30_70_numpy, "viridis", float('nan'), float('nan'),
                           base_output_path + file_name + '_weights_70.png')
-        make_single_graph("Edges [3x3 kernel fill < 80%]", edgeImage_30_80_numpy, "gray", 0, 1,
+        make_single_graph("Edges [3x3 kernel fill < 80%]", edgeImage_30_80_numpy, "gray_r", 0, 1,
                           base_output_path + file_name + '_edges_80.png')
         make_single_graph("Weights [3x3 kernel fill < 80%]", innerWeight_30_80_numpy, "viridis", float('nan'), float('nan'),
                           base_output_path + file_name + '_weights_80.png')
-        make_single_graph("Edges [3x3 kernel fill < 90%]", edgeImage_30_90_numpy, "gray", 0, 1,
+        make_single_graph("Edges [3x3 kernel fill < 90%]", edgeImage_30_90_numpy, "gray_r", 0, 1,
                           base_output_path + file_name + '_edges_90.png')
         make_single_graph("Weights [3x3 kernel fill < 90%]", innerWeight_30_90_numpy, "viridis", float('nan'), float('nan'),
                           base_output_path + file_name + '_weights_90.png')

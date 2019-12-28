@@ -78,7 +78,7 @@ class Benchmark:
         return dice, epoch
 
     def GetBiggestParameterAndIndex(self, elementList):
-        biggestElement = 0.0
+        biggestElement = 0
         biggestElementIndex = -1
         counter = 0
         for element in elementList:

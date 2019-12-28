@@ -18,15 +18,36 @@ def GetFileName(path):
     fileName, fileExtension = os.path.splitext(fileNameWithExt)
     return fileName
 
+#method to sort directories by number
+def SortDirectoriesByNumber(directories):
+    last_directory_parts = []
+    for i in range(0, len(directories)):
+        last_directory_part = os.path.basename(os.path.normpath(directories[i]))
+        last_directory_parts.append((int)(last_directory_part))
+    last_directory_parts.sort()
+    sorted_list = []
+    for i in range(0, len(last_directory_parts)):
+        for j in range(0, len(directories)):
+            last_directory_part = os.path.basename(os.path.normpath(directories[j]))
+            number = (int)(last_directory_part)
+            if last_directory_parts[i] == number:
+                sorted_list.append(directories[j])
+                break
+    return sorted_list
+
 def AnalyzeArchitecture():
     #do analysis for every class
-    trainings = 'C:/src/Set_1/'
+    trainings = 'D:/CracksTrainings/Set_4/'
     allScores = open(trainings + 'allScores.txt','w')
 
     inputDirs = glob.glob(trainings + '*/')
     for inputDir in inputDirs:
         #Get subdirectories from prediction images
         inputPredictionSubDirs = glob.glob(inputDir + 'prediction/' + '*/')
+
+        #sort directories by number in ascending order
+        inputPredictionSubDirs = SortDirectoriesByNumber(inputPredictionSubDirs)
+
         averageScore = open(inputDir + 'averageScore' + '.txt','w')
         configName = os.path.basename(os.path.normpath(inputDir))
         firstLine = 'Epoch TrainingLoss Recall Precision Accuracy F1 IoU Dice' + '\n'
@@ -65,8 +86,8 @@ def AnalyzeArchitecture():
                     os.makedirs(imageOutputDirectory)
             
                 """
-            imagePath = 'E:/RoadCracksInspection/datasets/Set_1/Test/Images/'
-            labelsPath = 'E:/RoadCracksInspection/datasets/Set_1/Test/Labels/'
+            imagePath = 'D:/RoadCracksInspection/datasets/Set_4/Test/Images/'
+            labelsPath = 'D:/RoadCracksInspection/datasets/Set_4/Test/Labels/'
             images = glob.glob(imagePath + '*.bmp')
             labels = glob.glob(labelsPath + '*.bmp')  
             predictions = glob.glob(inputPredictionSubDir + '*.bmp')      
