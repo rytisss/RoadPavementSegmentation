@@ -93,9 +93,9 @@ def save_and_analyze_prediction(path, left, top, right, bottom, image_crop, labe
     cv2.imwrite(path + crop_name + '_' + name + '.bmp', rendered_crop_prediction_bad)
 
     #draw double mark of label and prediction
-    common_color = (0, 150, 0)
-    prediction_color = (0, 50, 50)
-    label_color = (0, 0, 80)
+    common_color = (0, 130, 0)
+    prediction_color = (0, 170, 170)
+    label_color = (0, 0, 200)
     common_image = np.copy(image_crop)
     common_image = cv2.cvtColor(common_image, cv2.COLOR_GRAY2RGB)
     width = label_crop.shape[0]
@@ -131,10 +131,18 @@ def save_and_analyze_full_prediction(path, image, label, prediction_path, rois):
     _, prediction = cv2.threshold(prediction, 127, 255, cv2.THRESH_BINARY)
     name = get_file_name_only(prediction_path)
 
+    outer_color = (0, 200, 200)
+    inner_color = (0, 70, 70)
+    rendered_prediction_bad = Render.Defects(image, prediction, outer_color, inner_color)
+    rendered_prediction_bad = render_border(rendered_prediction_bad)
+    name = get_file_name_only(prediction_path)
+    rendered_prediction_bad = render_regions(rendered_prediction_bad, rois)
+    cv2.imwrite(path + '_' + name + '.bmp', rendered_prediction_bad)
+
     #draw double mark of label and prediction
-    common_color = (0, 150, 0)
-    prediction_color = (0, 70, 70)
-    label_color = (0, 0, 90)
+    common_color = (0, 170, 0)
+    prediction_color = (0, 130, 130)
+    label_color = (0, 0, 200)
     common_image = np.copy(image)
     common_image = cv2.cvtColor(common_image, cv2.COLOR_GRAY2RGB)
     width = label.shape[0]
@@ -399,7 +407,7 @@ for image_path in image_paths:
                     label = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
                     cv2.imshow('label', label)
                     cv2.waitKey(1)
-                    
+
             #Search right prediction image
             for prediction_path in prediction_paths:
                 prediction_name = get_file_name_only(prediction_path)

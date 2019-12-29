@@ -5,6 +5,21 @@ import glob
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+def parse_label(label):
+    first_addition = 'Prediction of model trained with '
+    second_addition = ' function'
+    if '_predict_ce' in label:
+        return first_addition + r'$\mathit{L}_{\mathit{CE}}$' + second_addition
+    if '_predict_dice' in label:
+        return first_addition + r'$\mathit{L}_{\mathit{D}}$'+ second_addition
+    if '_predict_w60ce' in label:
+        return first_addition + r'$\mathit{L}_{\mathit{W60CE}}$'+ second_addition
+    if '_predict_w70ce' in label:
+        return first_addition + r'$\mathit{L}_{\mathit{W70CE}}$'+ second_addition
+    if '_predict_wce' in label:
+        return first_addition + r'$\mathit{L}_{\mathit{WCE}}$'+ second_addition
+    return label
+
 def get_file_name_only(path):
     file_name_with_ext = path.rsplit('\\', 1)[1]
     file_name, file_ext = os.path.splitext(file_name_with_ext)
@@ -30,7 +45,8 @@ def threshold_n_invert_n_draw_frame(image):
 
 def add_subplot(fig, rows, cols, pos, name, image, colorspace, min, max):
     image_plot = fig.add_subplot(rows, cols, pos)
-    #image_plot.title.set_text(name)
+    name = parse_label(name)
+    image_plot.title.set_text(name)
     im = plt.imshow(image, cmap=colorspace, vmin=min, vmax=max)
     divider = make_axes_locatable(image_plot)
     cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -97,14 +113,14 @@ for image_path in image_paths:
             cv2.waitKey(1)
             #Save image
             cv2.imwrite(output + image_name + '_.bmp', image)
-            make_single_graph_full('', image, output + image_name + 'graph_.png')
+            make_single_graph_full('Image', image, output + image_name + 'graph_.png')
             #Search right label image
             for label_path in label_paths:
                 label_name = get_file_name_only(label_path)
                 if image_name_segment in label_name:
                     label = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
-                    make_single_graph_grayscale('', label, output + label_name + 'graph_.png')
-                    make_single_graph('', label, output + label_name + 'color_graph_.png')
+                    make_single_graph_grayscale('Label', label, output + label_name + 'graph_.png')
+                    make_single_graph('Label', label, output + label_name + 'color_graph_.png')
                     label = threshold_n_invert_n_draw_frame(label)
                     cv2.imshow('label', label)
                     cv2.waitKey(1)
@@ -115,10 +131,10 @@ for image_path in image_paths:
                 prediction_name = get_file_name_only(prediction_path)
                 if image_name_segment in prediction_name:
                     prediction = cv2.imread(prediction_path, cv2.IMREAD_GRAYSCALE)
-                    make_single_graph('', prediction, output + prediction_name + 'graph_.png')
+                    make_single_graph(prediction_name, prediction, output + prediction_name + 'graph_.png')
                     #threshold at 50%
                     _, prediction_th = cv2.threshold(prediction, 127, 255, cv2.THRESH_BINARY)
-                    make_single_graph('', prediction_th, output + prediction_name + 'graph50_.png')
+                    make_single_graph(prediction_name, prediction_th, output + prediction_name + 'graph50_.png')
                     prediction = threshold_n_invert_n_draw_frame(prediction)
                     cv2.imshow('prediction', prediction)
                     cv2.waitKey(1)
