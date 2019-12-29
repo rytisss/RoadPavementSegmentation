@@ -77,6 +77,24 @@ class Benchmark:
         dice, epoch = self.GetBiggestParameterAndIndex(self.diceList)
         return dice, epoch
 
+    def GetAccuracyAt(self, index):
+        return self.GetParameterAt(self.accuracyList, index)
+
+    def GetRecallAt(self, index):
+        return self.GetParameterAt(self.recallList, index)
+
+    def GetPrecisionAt(self, index):
+        return self.GetParameterAt(self.precisionList, index)
+
+    def GetIoUAt(self, index):
+        return self.GetParameterAt(self.iouList, index)
+
+    def GetDiceAt(self, index):
+        return self.GetParameterAt(self.diceList, index)
+
+    def GetParameterAt(self, elementList, index):
+        return elementList[index]
+
     def GetBiggestParameterAndIndex(self, elementList):
         biggestElement = 0
         biggestElementIndex = -1

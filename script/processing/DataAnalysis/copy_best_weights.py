@@ -21,17 +21,19 @@ def copy_files(source, destination):
 
 def main():
     sets = ['Set_0', 'Set_1', 'Set_2', 'Set_3', 'Set_4']
+    all_lines = []
     for set in sets:
+        set_lines = []
         print('\n' + set + '\n')
         architecturesInputDir = 'D:/CracksTrainings/' + set + '/'
         outputDir = 'D:/CrackTrainings_best/' + set + '/'
         # Get subdirectories of all architectures
         inputArchitecturesSubDirs = glob.glob(architecturesInputDir + '*/')
         directory_names = []
-        dice_scores = []
-        epoch_number = []
         full_paths = []
         for inputArchitectureSurDir in inputArchitecturesSubDirs:
+            if 'SEQ' in inputArchitectureSurDir:
+                continue #skip
             txt_path = inputArchitectureSurDir + 'averageScore.txt'
             dir_name = os.path.basename(os.path.normpath(inputArchitectureSurDir))
             input_file = open(txt_path, 'r')
@@ -46,8 +48,19 @@ def main():
                 count += 1
             directory_names.append(dir_name)
             score, epoch = currentBenchmark.GetBestDice()
-            dice_scores.append(score)
-            epoch_number.append(epoch + 1)
+            print('Best dice score' + str(score))
+            #to check
+            receivedDice = currentBenchmark.GetDiceAt(epoch)
+            print('Received dice score' + str(receivedDice))
+            print('acc rec precision iou dice')
+            acc = currentBenchmark.GetAccuracyAt(epoch)
+            rec = currentBenchmark.GetRecallAt(epoch)
+            pre = currentBenchmark.GetPrecisionAt(epoch)
+            iou = currentBenchmark.GetIoUAt(epoch)
+            dice = currentBenchmark.GetDiceAt(epoch)
+            line = str(acc) + ',' + str(rec) + ',' + str(pre) + ',' + str(iou) + ',' + str(dice)
+            set_lines.append(line)
+
             #add 1 cause epoch starts to count from 1
             full_path = inputArchitectureSurDir + 'prediction//' + str(epoch) + '//'
             full_paths.append(full_path)
@@ -59,7 +72,14 @@ def main():
                 os.makedirs(best_weights_dir)
             copy_files(full_path, best_weights_dir)
             input_file.close()
-        print('Done!')
+        all_lines.append(set_lines)
+    print('Done!')
+    #print all
+    print('acc rec precision iou dice')
+    for set_lines in all_lines:
+        for best_scores in set_lines:
+            print(best_scores)
+        print('\n')
         #makeGraph(x, y)
 
 
