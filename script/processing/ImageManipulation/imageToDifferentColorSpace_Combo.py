@@ -96,7 +96,7 @@ def make_single_graph_full(name, image, save_path):
 label_path = 'C:/Users/Rytis/Desktop/Straipsniai/Sensors_FromIDAACS/insight comparisson/combo/label/'
 image_path = 'C:/Users/Rytis/Desktop/Straipsniai/Sensors_FromIDAACS/insight comparisson/combo/image/'
 prediction_path = 'C:/Users/Rytis/Desktop/Straipsniai/Sensors_FromIDAACS/insight comparisson/combo/prediction/'
-image_name_segments = ['16', '27', '28', '34']
+image_name_segments = ['005','16', '27', '28', '34']
 output = 'C:/Users/Rytis/Desktop/Straipsniai/Sensors_FromIDAACS/insight comparisson/combo/'
 
 #gather all images from directory

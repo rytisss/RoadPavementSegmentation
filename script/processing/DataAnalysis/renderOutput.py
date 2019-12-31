@@ -1,15 +1,4 @@
-import os
-import glob
-import cv2
-import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
-
-from benchmark import Benchmark
-from statistics import Statistics
-from render import Render
-from imageData import ImageData
-
+"""
 def MakeVideo(classNr, configuration, predictionPath):
         inputDir = 'C:/Users/rytis/OneDrive/Desktop/Straipsniai/DAGM/Class' + str(classNr) + '/Test/'
         inputImageDir = inputDir + 'image/'
@@ -149,96 +138,235 @@ def MakeVideo(classNr, configuration, predictionPath):
                 #make it last for 0.5 second
                 for i in range(0, 15):
                         architectureOutVideo.write(outputImage)
-        
-                """
-                cv2.imshow('Rendered', renderedPrediction)
-                cv2.imshow('Label', label)
-                cv2.imshow('Image', renderedImage)
-                cv2.imshow('Prediction', prediction)
-                """
-                cv2.imshow('Output', outputImage)
-                cv2.waitKey(1)
-        architectureOutVideo.release()
+"""
+import os
+import glob
+import shutil
+import cv2
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
 
-def GetCurrentPredictionInfo(path):
-    info = os.path.basename(os.path.normpath(path))
-    #three first symbols discribes epoch, then '-' and the rest 6 symbols are dice coeficient
-    words = info.split('-')
-    epochNumber = int(words[0])
-    diceLoss = float(words[1]) 
-    return epochNumber, diceLoss
+from script.processing.DataAnalysis.benchmark import Benchmark
+from script.processing.DataAnalysis.render import Render
+from script.processing.DataAnalysis.statistics import Statistics
+from script.processing.DataAnalysis.imageData import ImageData
 
-def render(benchmark):
-        #get best dice coeficient epoch index
-        dice, index = benchmark.GetBestDice()
-        configName = benchmark.configName
-        classNumber = benchmark.classNr
-        neuralNetworkPredictionPath = "C:/Users/rytis/OneDrive/Desktop/Straipsniai/Pattern recognition letters/biggerBatchSizeTraining_output/biggerBatchSizeTraining_output/"
-        pathToClassConfigOutputs = neuralNetworkPredictionPath + str(configName) + '/class' + str(classNumber) + '/'
-        allEpochsDataPaths = glob.glob(pathToClassConfigOutputs + '*/')
-        for path in allEpochsDataPaths:
-                dirname = os.path.basename(os.path.dirname(path))
-                epochNumber, diceLoss = GetCurrentPredictionInfo(dirname)
-                epochNumber = epochNumber - 1
-                if epochNumber == index:
-                        #open and render
-                        MakeVideo(classNumber, configName, path)
 
+def translate_name(label):
+        if 'l4k32AutoEncoder4_5x5_CROSSENTROPY25DICE75_0_0.001_' in label:
+                return 'L_CE25%_D75%'
+        if 'l4k32AutoEncoder4_5x5_CROSSENTROPY50DICE50_0_0.001_' in label:
+                return 'L_CE50%_D50%'
+        if 'l4k32AutoEncoder4_5x5_CROSSENTROPY75DICE25_0_0.001_' in label:
+                return 'L_CE75%_D25%'
+        if 'l4k32AutoEncoder4_5x5_CROSSENTROPY_0_0.001_' in label:
+                return 'L_CE'
+        if 'l4k32AutoEncoder4_5x5_DICE_0_0.001_' in label:
+                return 'L_D'
+        if 'l4k32AutoEncoder4_5x5_SURFACEnDICE_0_0.001_' in label:
+                return 'L_DB'
+        if 'l4k32AutoEncoder4_5x5_WEIGHTED60CROSSENTROPY_0_0.001_' in label:
+                return 'L_W60CE'
+        if 'l4k32AutoEncoder4_5x5_WEIGHTED70CROSSENTROPY_0_0.001_' in label:
+                return 'L_W70CE'
+        if 'l4k32AutoEncoder4_5x5_WEIGHTEDCROSSENTROPY25DICE75_0_0.001_' in label:
+                return 'L_WCE25%_D75%'
+        if 'l4k32AutoEncoder4_5x5_WEIGHTEDCROSSENTROPY50DICE50_0_0.001_' in label:
+                return 'L_WCE50%_D50%'
+        if 'l4k32AutoEncoder4_5x5_WEIGHTEDCROSSENTROPY75DICE25_0_0.001_' in label:
+                return 'L_WCE75%_D25%'
+        if 'l4k32AutoEncoder4_5x5_WEIGHTEDCROSSENTROPY_0_0.001_' in label:
+                return 'L_WCE'
+
+def get_image_width_n_height(image):
+    width = image.shape[0]
+    height = image.shape[1]
+    return width, height
+
+def draw_frame(image):
+    width, height = get_image_width_n_height(image)
+    borderColor = (180, 52, 235)
+    cv2.rectangle(image, (0, 0), (height - 1, width - 1), borderColor, 1)
+    return image
+
+def render_video(architecture_dir, images_dir, label_dir, prediction_dir, output_video, set_number):
+    image_paths = glob.glob(images_dir + '*.bmp')
+    label_paths = glob.glob(label_dir + '*.bmp')
+    prediction_paths = glob.glob(prediction_dir + '*.bmp')
+    last_dir_folder = translate_name(os.path.basename(os.path.normpath(architecture_dir)))
+    title = str(set_number) + ' ' + last_dir_folder
+    print(title)
+
+    width = 480 * 4
+    bottom_offset = 200
+    top_offset = 300
+    height = 320 + bottom_offset + top_offset
+
+    architectureVideoName = output_video + title + '.avi'
+    architectureOutVideo = cv2.VideoWriter(architectureVideoName, cv2.VideoWriter_fourcc('X', 'V', 'I', 'D'), 30.0,
+                                           (width, height))
+
+    for i in range(0, len(image_paths)):
+        image = cv2.imread(image_paths[i], cv2.IMREAD_GRAYSCALE)
+        label = cv2.imread(label_paths[i], cv2.IMREAD_GRAYSCALE)
+        prediction = cv2.imread(prediction_paths[i], cv2.IMREAD_GRAYSCALE)
+        _, prediction_th = cv2.threshold(prediction,127,255,cv2.THRESH_BINARY)
+        image_color = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        label_color = cv2.cvtColor(label, cv2.COLOR_GRAY2RGB)
+        prediction_color = cv2.cvtColor(prediction, cv2.COLOR_GRAY2RGB)
+        prediction_th_color = cv2.cvtColor(prediction_th, cv2.COLOR_GRAY2RGB)
+        outer_color = (0, 0, 200)
+        inner_color = (0, 0, 80)
+        image_with_prediction = Render.Defects(image, prediction_th, outer_color, inner_color)
+        image_with_label = Render.Defects(image, label, outer_color, inner_color)
+
+        #draw frame for all used images
+        image_with_label = draw_frame(image_with_label)
+        label_color = draw_frame(label_color)
+        prediction_color = draw_frame(prediction_color)
+        image_with_prediction = draw_frame(image_with_prediction)
+
+        image_height, image_width = get_image_width_n_height(image_with_prediction)
+
+        # form output
+        outputImage = np.zeros((height, width, 3), np.uint8)
+        #set images
+        outputImage[top_offset:top_offset + image_height, 0:image_width] = image_with_label
+        outputImage[top_offset:top_offset + image_height, image_width:image_width * 2] = label_color
+        outputImage[top_offset:top_offset + image_height, image_width*2:image_width * 3] = prediction_color
+        outputImage[top_offset:top_offset + image_height, image_width*3:image_width * 4] = image_with_prediction
+
+        # render names for images
+        resultsTextThickness = 1
+        resultsTextScale = 1.1
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        fontColor = (255, 255, 255)
+        resultsTextThickness = 2
+        lineType = cv2.LINE_AA
+        text_offset = 20
+
+        # render results under
+        currentResultsTitle = 'Image + Label'
+        textPos = (120, top_offset - text_offset)
+        cv2.putText(outputImage, currentResultsTitle,
+                    textPos,
+                    font,
+                    resultsTextScale,
+                    fontColor,
+                    resultsTextThickness,
+                    lineType)
+
+        currentResultsTitle = 'Label'
+        textPos = (image_width + 180, top_offset - text_offset)
+        cv2.putText(outputImage, currentResultsTitle,
+                    textPos,
+                    font,
+                    resultsTextScale,
+                    fontColor,
+                    resultsTextThickness,
+                    lineType)
+
+        currentResultsTitle = 'Full Prediction'
+        textPos = (2 * image_width + 120, top_offset - text_offset)
+        cv2.putText(outputImage, currentResultsTitle,
+                    textPos,
+                    font,
+                    resultsTextScale,
+                    fontColor,
+                    resultsTextThickness,
+                    lineType)
+
+        currentResultsTitle = 'Image + Prediction >50%'
+        textPos = (3 * image_width + 10, top_offset - text_offset)
+        cv2.putText(outputImage, currentResultsTitle,
+                    textPos,
+                    font,
+                    resultsTextScale,
+                    fontColor,
+                    resultsTextThickness,
+                    lineType)
+
+        # render main title
+        resultsTextScale = 1.7
+        resultsTextThickness = 2
+        title_text_width = cv2.getTextSize(title, font, resultsTextScale, resultsTextThickness)
+        title_x_pos = (int)(width / 2 - title_text_width[0][0] / 2)
+        textPos = (title_x_pos, top_offset - 100)
+        cv2.putText(outputImage, title,
+                    textPos,
+                    font,
+                    resultsTextScale,
+                    fontColor,
+                    resultsTextThickness,
+                    lineType)
+
+        for i in range(0, 15):
+            architectureOutVideo.write(outputImage)
+
+        cv2.imshow('output', outputImage)
+        cv2.imshow('image', image)
+        cv2.imshow('label', label)
+        cv2.imshow('prediction', prediction)
+        cv2.imshow('prediction50%', prediction_th)
+        cv2.imshow('image with prediction', image_with_prediction)
+        cv2.imshow('image with label', image_with_label)
+        cv2.waitKey(1)
+
+    architectureOutVideo.release()
 def main():
-        minAreaFilters = [0, 1]
-        configurationNames = ['l2k8', 'l2k16', 'l2k32', 'l3k8', 'l3k16', 'l3k32', 'l4k8','l4k16', 'l4k32', 'l5k8', 'l5k16', 'l5k32']
-        parametersCount = [25929, 102025, 117673, 467785, 483433, 1928393, 1944041, 7765961]
-        epochTrainingTime = [32, 35, 55, 36, 45, 74, 39, 51, 88, 42, 56, 102]
-        iterationExecution = [0.01577, 0.0171, 0.0221, 0.01804, 0.0203, 0.0286, 0.01869, 0.022, 0.0328, 0.02083, 0.0231, 0.037]
-        iterationExecutionMS = [15.8, 17.1, 22.1, 18.0, 20.3, 28.6, 18.7, 22.0, 32.8, 20.8, 23.1, 37.0]
-        classNames = ['1', '2', '3', '4', '5', '6']
+    sets = ['Set_0', 'Set_1', 'Set_2', 'Set_3', 'Set_4']
+    all_lines = []
+    for set in sets:
+        set_lines = []
+        print('\n' + set + '\n')
+        architecturesInputDir = 'D:/CracksTrainings/' + set + '/'
+        outputDir = 'D:/CrackTraining_best_video/'
+        image_path = 'C:/Users/Rytis/Desktop/datasets/' + set + '/Test/Images/'
+        label_path = 'C:/Users/Rytis/Desktop/datasets/' + set + '/Test/Labels/'
 
-        #####################################################
-        #configuration read
-        #####################################################
-
-        architecturesInputDir = 'C:/Users/rytis/OneDrive/Desktop/Straipsniai/Pattern recognition letters/retrain/'
-
-        #Get subdirectories of all architectures
+        # Get subdirectories of all architectures
         inputArchitecturesSubDirs = glob.glob(architecturesInputDir + '*/')
+        directory_names = []
+        full_paths = []
+        for inputArchitectureSurDir in inputArchitecturesSubDirs:
+            if 'SEQ' in inputArchitectureSurDir:
+                continue #skip
+            txt_path = inputArchitectureSurDir + 'averageScore.txt'
+            dir_name = os.path.basename(os.path.normpath(inputArchitectureSurDir))
+            input_file = open(txt_path, 'r')
+            currentBenchmark = Benchmark()
+            count = 0
+            for lineText in input_file:
+                # skip first line
+                if count == 0:
+                    count = count + 1
+                    continue
+                currentBenchmark.parseDataLine(lineText, count-1)
+                count += 1
+            directory_names.append(dir_name)
+            score, epoch = currentBenchmark.GetBestDice()
+            print('Best dice score' + str(score))
+            #to check
+            receivedDice = currentBenchmark.GetDiceAt(epoch)
+            print('Received dice score' + str(receivedDice))
+            print('acc rec precision iou dice')
+            acc = currentBenchmark.GetAccuracyAt(epoch)
+            rec = currentBenchmark.GetRecallAt(epoch)
+            pre = currentBenchmark.GetPrecisionAt(epoch)
+            iou = currentBenchmark.GetIoUAt(epoch)
+            dice = currentBenchmark.GetDiceAt(epoch)
+            line = str(acc) + ',' + str(rec) + ',' + str(pre) + ',' + str(iou) + ',' + str(dice)
+            set_lines.append(line)
 
-        results = []
+            #add 1 cause epoch starts to count from 1
+            full_path = inputArchitectureSurDir + 'prediction//' + str(epoch) + '//'
+            render_video(inputArchitectureSurDir, image_path, label_path, full_path, outputDir, set)
 
-        #make double array
-        for i in range(0,6):
-                classBenchmark = []
-                results.append(classBenchmark)
+            input_file.close()
 
-        configCount = 0
-        for inputArchitectureDir in inputArchitecturesSubDirs:
-                configName = configurationNames[configCount]
-                #do analysis for every class
-                for classNr in range(1, 7):
-                        #make results for predictions
-                        #################################################
-                        inputPredictionDir = inputArchitectureDir + str(classNr) + '/'
 
-                        #Get subdirectories from prediction images
-                        inputPredictionSubDirs = glob.glob(inputPredictionDir + '*/')
+if __name__ == "__main__":
+    main()
 
-                        txtPath = inputPredictionDir + 'averageScore' + '_minAreastr_0' + '.txt'
-                        inputFile = open(txtPath,'r')
-                        currentBenchmark = Benchmark()
-                        currentBenchmark.classNr = classNr
-                        currentBenchmark.configName = configName
-                        currentBenchmark.minAreaFilter = 0
-                        count = 0
-                        for lineText in inputFile:
-                                #skip first line
-                                if count == 0:
-                                        count = count + 1
-                                        continue
-                                currentBenchmark.parseDataLine(lineText)
-                        render(currentBenchmark)
-                        results[classNr - 1].append(currentBenchmark)
-                        inputFile.close()
-                configCount = configCount + 1
-
-if __name__== "__main__":
-        main()
 
