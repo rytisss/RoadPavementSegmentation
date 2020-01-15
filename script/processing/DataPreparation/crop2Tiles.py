@@ -45,11 +45,11 @@ def cropImageFromRegion(image, roi):
     return crop_img
 
 def main():
-    inputDir = 'E:/RoadCracksInspection/datasets80-20/Set_' + str(setIndex) + '/Test/'
-    imageDir = inputDir + 'Images/'
-    labelDir = inputDir + 'Labels/'
+    inputDir = 'D:/Sensors_FromIDAACS/major revision/another dataset comparisson/'
+    imageDir = inputDir + 'cracktree200gray/'
+    labelDir = inputDir + 'cracktree200_gt/'
 
-    ouputDir = 'E:/RoadCracksInspection/datasets80-20/Set_' + str(setIndex) + '/Test/Smaller/'
+    ouputDir = 'D:/Sensors_FromIDAACS/major revision/another dataset comparisson/'
     outputImageDir = ouputDir + 'Images/'
     outputLabelDir = ouputDir + 'Labels/'
 
@@ -60,19 +60,19 @@ def main():
         os.makedirs(outputLabelDir)
 
     seed = 115
-    imagePaths  = glob.glob(imageDir + '*.bmp')
-    labelPaths = glob.glob(labelDir + '*.bmp')
+    imagePaths  = glob.glob(imageDir + '*.jpg')
+    labelPaths = glob.glob(labelDir + '*.png')
     random.Random(seed).shuffle(imagePaths)
     random.Random(seed).shuffle(labelPaths)
 
     #add additional number to front to be 'shuffle' randomly in directory
     counter = 0
-    tileWidth = 240
-    tileHeight = 240
+    tileWidth = 480
+    tileHeight = 320
     overlay = 120
 
-    inputWidth = 480
-    inputHeight = 320
+    inputWidth = 800
+    inputHeight = 600
 
     regions = splitImageToTiles(inputWidth,inputHeight, tileWidth, tileHeight, overlay)
 
