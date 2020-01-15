@@ -199,8 +199,8 @@ def render_video(architecture_dir, images_dir, label_dir, prediction_dir, output
     print(title)
 
     width = 480 * 4
-    bottom_offset = 200
-    top_offset = 300
+    bottom_offset = 10
+    top_offset = 100
     height = 320 + bottom_offset + top_offset
 
     architectureVideoName = output_video + title + '.avi'
@@ -244,7 +244,7 @@ def render_video(architecture_dir, images_dir, label_dir, prediction_dir, output
         fontColor = (255, 255, 255)
         resultsTextThickness = 2
         lineType = cv2.LINE_AA
-        text_offset = 20
+        text_offset = 15
 
         # render results under
         currentResultsTitle = 'Image + Label'
@@ -292,7 +292,7 @@ def render_video(architecture_dir, images_dir, label_dir, prediction_dir, output
         resultsTextThickness = 2
         title_text_width = cv2.getTextSize(title, font, resultsTextScale, resultsTextThickness)
         title_x_pos = (int)(width / 2 - title_text_width[0][0] / 2)
-        textPos = (title_x_pos, top_offset - 100)
+        textPos = (title_x_pos, top_offset-50)
         cv2.putText(outputImage, title,
                     textPos,
                     font,
@@ -301,7 +301,7 @@ def render_video(architecture_dir, images_dir, label_dir, prediction_dir, output
                     resultsTextThickness,
                     lineType)
 
-        for i in range(0, 15):
+        for i in range(0, 30):
             architectureOutVideo.write(outputImage)
 
         cv2.imshow('output', outputImage)
