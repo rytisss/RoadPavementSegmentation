@@ -104,7 +104,7 @@ def saveResult(save_path, npyfile, flag_multi_class=False, num_class=2):
         img *= 255.0
         img = img.astype(np.uint8)
         # io.imsave(os.path.join(save_path,"%d_predict.bmp"%i),img)
-        cv2.imwrite(os.path.join(save_path, "%03d_predict.bmp" % i), img)
+        cv2.imwrite(os.path.join(save_path, "%05d_predict.bmp" % i), img)
 
 
 def labelVisualize(num_class, color_dict, img):

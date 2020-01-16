@@ -75,7 +75,8 @@ def main():
     inputHeight = 600
 
     regions = splitImageToTiles(inputWidth,inputHeight, tileWidth, tileHeight, overlay)
-
+    counter = 0
+    regionIndex = 0
     for i in range(0, len(imagePaths)):
         print("Image: " + imagePaths[i])
         print("Label: " + labelPaths[i])
@@ -89,7 +90,7 @@ def main():
         label = cv2.imread(labelPaths[i], cv2.IMREAD_UNCHANGED)
 
         #do cropping, rotation and saving
-        regionIndex = 0
+
         for region in regions:
             croppedImage = cropImageFromRegion(image, region)
             croppedLabel = cropImageFromRegion(label, region)
@@ -97,10 +98,11 @@ def main():
             augment = False
             if not augment:
                 #original
-                frontName = str(random.randint(0,1000)) + '_'
-                print("Random: " + frontName)
-                saveImage(croppedImage, outputImageDir, frontName + imageName, '_')
-                saveImage(croppedLabel, outputLabelDir, frontName + labelName, '_')
+                #frontName = format(random.randint(0,1000), '05d') + '_'
+                #print("Random: " + frontName)
+                frontName = format(regionIndex, '05d')
+                saveImage(croppedImage, outputImageDir, frontName, '_')
+                saveImage(croppedLabel, outputLabelDir, frontName, '_')
             else:
                 flips = [0, 1]
                 rotates = [0,90,180,270]
@@ -116,10 +118,12 @@ def main():
                             imageaug = AugmentationTool.RotateImage(croppedImage, rotate)
                             labelaug = AugmentationTool.RotateImage(croppedLabel, rotate)
                         frontName = str(random.randint(0,1000)) + '_'
+                        frontName = f'{frontName:05}'
                         print("Random: " + frontName)
                         saveImage(imageaug, outputImageDir, frontName + imageName, labelAdd)
                         saveImage(labelaug, outputLabelDir, frontName + labelName, labelAdd)
             regionIndex+=1
+            counter += 1
             #rotation 270
             #image270 = AugmentationTool.RotateImage(croppedImage, 270)
             #label270 = AugmentationTool.RotateImage(croppedLabel, 270)
