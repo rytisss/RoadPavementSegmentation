@@ -210,7 +210,7 @@ def render_video(architecture_dir, images_dir, label_dir, prediction_dir, output
     architectureOutVideo = cv2.VideoWriter(architectureVideoName, cv2.VideoWriter_fourcc('X', 'V', 'I', 'D'), 30.0,
                                            (width, height))
 
-    for i in range(0, len(image_paths)):
+    for i in range(0, 1233):
         image = cv2.imread(image_paths[i], cv2.IMREAD_GRAYSCALE)
         label = cv2.imread(label_paths[i], cv2.IMREAD_GRAYSCALE)
         prediction = cv2.imread(prediction_paths[i], cv2.IMREAD_GRAYSCALE)
@@ -304,7 +304,7 @@ def render_video(architecture_dir, images_dir, label_dir, prediction_dir, output
                     resultsTextThickness,
                     lineType)
 
-        for i in range(0, 30):
+        for i in range(0, 15):
             architectureOutVideo.write(outputImage)
 
         cv2.imshow('output', outputImage)
@@ -338,7 +338,7 @@ def main():
             if 'SEQ' in inputArchitectureSurDir:
                 continue  # skip
 
-            full_path = inputArchitectureSurDir + 'crack200//'
+            full_path = inputArchitectureSurDir + 'crack200_new//'
             render_video(inputArchitectureSurDir, image_path, label_path, full_path, outputDir, set)
 
 

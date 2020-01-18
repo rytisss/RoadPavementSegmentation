@@ -34,7 +34,7 @@ def main():
             if 'SEQ' in inputArchitectureSurDir:
                 continue #skip
             weight_paths = glob.glob(inputArchitectureSurDir + '*.hdf5')
-            output_path = inputArchitectureSurDir + 'crack200/'
+            output_path = inputArchitectureSurDir + 'crack200_new/'
             print(weight_paths[0])
             #test and save
             predict_and_save(weight_paths[0], output_path)
