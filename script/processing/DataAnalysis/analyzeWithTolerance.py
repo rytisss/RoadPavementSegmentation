@@ -66,10 +66,11 @@ def AnalyzeSample(image, label, prediction):
                     tp += 1
                 else:
                     fp += 1
-    print('True positive: ' + str(tp))
-    print('False positive: ' + str(fp))
-    print('True negative: ' + str(tn))
-    print('False negative: ' + str(fn))
+    #print('True positive: ' + str(tp))
+    #print('False positive: ' + str(fp))
+    #print('True negative: ' + str(tn))
+    #print('False negative: ' + str(fn))
+    return tp, tn, fp, fn
 
 def AnalyzePredictions(prediction_paths, set_number):
     #gather all test image and labels
@@ -77,6 +78,10 @@ def AnalyzePredictions(prediction_paths, set_number):
     imagePaths = glob.glob(path_to_test_data + 'Images/' + '*.bmp')
     labelPaths = glob.glob(path_to_test_data + 'Labels/' + '*.bmp')
     predictionImagePaths = glob.glob(prediction_paths + '*.bmp')
+    tp = 0
+    fp = 0
+    tn = 0
+    fn = 0
     for i in range(0, len(predictionImagePaths)):
         image = cv2.imread(imagePaths[i], cv2.IMREAD_GRAYSCALE)
         label = cv2.imread(labelPaths[i], cv2.IMREAD_GRAYSCALE)
@@ -86,20 +91,29 @@ def AnalyzePredictions(prediction_paths, set_number):
         cv2.imshow('label', label)
         cv2.imshow('prediction', prediction)
         cv2.waitKey(1)
-        AnalyzeSample(image, label, prediction)
+        tp_image, tn_image, fp_image, fn_image =  AnalyzeSample(image, label, prediction)
+        tp += tp_image
+        tn += tn_image
+        fp += fp_image
+        fn += fn_image
+    return tp, tn, fp, fn
 
 def AnalyzeArchitecture():
     # do analysis for every class
-    set = 'Set_0'
-    trainings = 'D:/CrackTrainings_best/' + set + '/'
-    inputDirs = glob.glob(trainings + '*/')
-    for inputDir in inputDirs:
-        if 'SEQ' in inputDir:
-            continue#skip sequential forders
-        print('Analyzing: ' + inputDir)
-        # Get subdirectories from prediction images
-        AnalyzePredictions(inputDir, set)
-        configName = os.path.basename(os.path.normpath(inputDir))
+    sets = ['Set_0', 'Set_1', 'Set_2', 'Set_3', 'Set_4']
+    for set in sets:
+        print(set)
+        trainings = 'D:/CrackTrainings_best/' + set + '/'
+        inputDirs = glob.glob(trainings + '*/')
+        for inputDir in inputDirs:
+            if 'SEQ' in inputDir:
+                continue#skip sequential forders
+            #print('Analyzing: ' + inputDir)
+            configName = os.path.basename(os.path.normpath(inputDir))
+            #print(configName)
+            # Get subdirectories from prediction images
+            tp, tn, fp, fn = AnalyzePredictions(inputDir, set)
+            print(configName + ',' + str(tp) + ',' + str(tn) + ','+ str(fp) + ','+ str(fn))
 
 
 def main():
