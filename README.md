@@ -13,7 +13,7 @@ Third-party library priorities:
 2. OpenCV
 3. Many nifty things related to Python programming language
 
-# Rendered results:  
+# Rendered video results:  
 ---------------------  
 ## CrackForest links:  
 #### [UNet](https://www.youtube.com/watch?v=mcLsCJ7fH2k&list=PL5dj7GxMk-6wtz5SVQnv1dPBoSc_5lHQ2&index=11), [ResUNet](https://www.youtube.com/watch?v=xEnShuqWLjg&list=PL5dj7GxMk-6wtz5SVQnv1dPBoSc_5lHQ2&index=15), [ResUNet+ASPP](https://www.youtube.com/watch?v=2sbeCc27ZUo&list=PL5dj7GxMk-6wtz5SVQnv1dPBoSc_5lHQ2&index=18), [ResUNet+ASPP+AG](https://www.youtube.com/watch?v=1AMHWY-OAhA&list=PL5dj7GxMk-6wtz5SVQnv1dPBoSc_5lHQ2&index=12), [ResUNet+ASPP_WF](https://www.youtube.com/watch?v=FqQiivLl1s8&list=PL5dj7GxMk-6wtz5SVQnv1dPBoSc_5lHQ2&index=14), [ResUNet+ASPP_WF+AG](https://www.youtube.com/watch?v=9F_zW5VmIT0&list=PL5dj7GxMk-6wtz5SVQnv1dPBoSc_5lHQ2&index=13)  
