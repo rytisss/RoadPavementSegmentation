@@ -3,9 +3,9 @@ from models.autoencoder import UNet4, UNet4_res, UNet4_aspp, UNet4_res_asppWF, U
 from models.losses import Loss
 from models.utilities import trainGenerator
 import os
-##############################
+###############################
 # Super-basic training routine
-##############################
+###############################
 
 def train():
 

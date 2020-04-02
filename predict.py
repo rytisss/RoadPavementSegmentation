@@ -16,9 +16,9 @@ def get_file_name(path):
     file_name, file_extension = os.path.splitext(file_name_with_ext)
     return file_name
 
-########################################
+##########################################
 # Super-basic testing/prediction routine
-########################################
+##########################################
 
 def predict():
     # Weights path
