@@ -8,9 +8,10 @@ Solutions:
 3. ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall" connections)
 4. ResUNet with Attention Gates
 
-### Baseline model:  
+## Baseline model:  
 <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/UNet4.png" width="900"/>  
-### Model induced with residual connections, ASPP, AG:  
+
+## Model induced with residual connections, ASPP, AG:  
 <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/UNet4AsppAGRes.png" width="900"/> 
 
 Third-party library priorities: 
