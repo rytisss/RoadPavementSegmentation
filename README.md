@@ -22,6 +22,12 @@ Third-party library priorities:
 2. OpenCV
 3. Many nifty things related to Python programming language
 
+## Usage:  
+### Everything is straight-forward. Check comments in the code!  
+train.py - train  
+predict.py - predict  
+predict_by_patches.py - predict big image by cropping it into regions and joining them after  
+
 # Rendered video results:  
 ---------------------  
 ## CrackForest links:  
