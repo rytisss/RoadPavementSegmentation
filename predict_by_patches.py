@@ -5,6 +5,7 @@ from autoencoder import *
 import preprocessing.crop_to_tiles
 import cv2
 import keras
+import os
 
 def gather_image_from_dir(input_dir):
     image_extensions = ['*.bmp', '*.jpg', '*.png']
