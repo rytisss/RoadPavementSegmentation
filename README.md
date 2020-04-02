@@ -8,6 +8,8 @@ Solutions:
 3. ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall" connections)
 4. ResUNet with Attention Gates
 
+<img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/UNet4.png" width="425"/> <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/UNet4AsppAGRes.png" width="425"/> 
+
 Third-party library priorities: 
 1. Tensorflow (with Keras frontend)
 2. OpenCV
