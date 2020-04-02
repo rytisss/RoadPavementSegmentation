@@ -28,7 +28,7 @@ Third-party library priorities:
 ### Everything is straight-forward. Check comments in the code!  
 train.py - train  
 predict.py - predict  
-predict_by_patches.py - predict big image by cropping it into regions and joining them after  
+predict_by_patches.py - predict a big image by cropping it into regions and joining them after  
 
 # Rendered video results:  
 ---------------------  
