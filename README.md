@@ -12,7 +12,10 @@ Solutions:
 <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/UNet4.png" width="900"/>  
 
 ## Model induced with residual connections, ASPP, AG:  
-<img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/UNet4AsppAGRes.png" width="900"/> 
+<img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/UNet4AsppAGRes.png" width="900"/>  
+
+## Some results with different architectures:
+<img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_.png" width="425"/> <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_label_.png" width="425"/> <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_unet_.png" width="425"/>  <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_unetResWF_.png" width="425"/> 
 
 Third-party library priorities: 
 1. Tensorflow (with Keras frontend)
