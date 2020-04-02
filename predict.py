@@ -55,7 +55,6 @@ def predict():
             cv2.imshow("prediction", prediction_image)
             cv2.waitKey(1)
 
-
 def main():
     predict()
 
