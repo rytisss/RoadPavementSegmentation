@@ -1,19 +1,14 @@
 # 5-layer UNet
 from keras.models import *
-from losses import *
-from layers import *
 from keras.optimizers import *
 from keras.utils.vis_utils import plot_model
+from keras.layers import *
 
-from models.layers import AtrousSpatialPyramidWaterFallPool, DecodingLayerAG_Res, AtrousSpatialPyramidPool
-
-"""
-WEIGHTED60CROSSENTROPY = 7,
-    WEIGHTED70CROSSENTROPY = 8,
-    CROSSENTROPY50DICE50 = 9,
-    CROSSENTROPY25DICE75 = 10,
-    CROSSENTROPY25DICE75 = 11
-    """
+from models.layers import AtrousSpatialPyramidWaterFallPool, DecodingLayerAG_Res, AtrousSpatialPyramidPool, \
+    EncodingLayer, DecodingLayer, DecodingLayerRes, EncodingLayerResAddOp
+from models.losses import Loss, cross_and_dice_loss, weighted_cross_and_dice_loss, dice_score, \
+    adjusted_weighted_bce_loss, weighted_bce_loss, FocalLoss, surface_loss, Active_Contour_Loss, binary_crossentropy, \
+    dice_loss
 
 
 def CompileModel(model, lossFunction):
