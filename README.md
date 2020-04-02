@@ -1,6 +1,8 @@
 # RoadPavementSegmentation
 Repository for all the material related to road pavements defect segmentation. Main idea behind the segmentation is to create/approve/test various architectures (modification of autoencoders, such as U-Net and its modifications) to find the best to do the task. 
 
+# CURRENTLY ARTICLE IS UNDER REVIEW!
+
 Solutions:
 1. UNet
 2. ResUNet
