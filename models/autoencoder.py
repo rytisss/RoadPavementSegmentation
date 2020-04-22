@@ -137,7 +137,8 @@ def UNet5_res(pretrained_weights=None,
                                 max_pool=True,
                                 max_pool_size=2,
                                 batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY):
+                                loss_function=Loss.CROSSENTROPY,
+              learning_rate = 1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -169,7 +170,7 @@ def UNet5_res(pretrained_weights=None,
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
     # Compile with selected loss function
-    model = CompileModel(model, loss_function)
+    model = CompileModel(model, loss_function, learning_rate)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
@@ -278,7 +279,8 @@ def UNet5_res_aspp(pretrained_weights=None,
                                 max_pool=True,
                                 max_pool_size=2,
                                 batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY):
+                                loss_function=Loss.CROSSENTROPY,
+                   learning_rate = 1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -311,7 +313,7 @@ def UNet5_res_aspp(pretrained_weights=None,
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
     # Compile with selected loss function
-    model = CompileModel(model, loss_function)
+    model = CompileModel(model, loss_function, learning_rate)
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
