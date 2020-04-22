@@ -1,7 +1,7 @@
 from keras.callbacks import ModelCheckpoint
-from models.autoencoder import UNet4, UNet4_res, UNet4_aspp, UNet4_res_asppWF, UNet4_res_aspp, UNet4_res_asppWF_AG, UNet4_res_aspp_AG
-from models.losses import Loss
-from models.utilities import trainGenerator
+from RoadPavementSegmentation.models.autoencoder import UNet4, UNet4_res, UNet4_aspp, UNet4_res_asppWF, UNet4_res_aspp, UNet4_res_asppWF_AG, UNet4_res_aspp_AG, UNet5_res, UNet5_res_aspp
+from RoadPavementSegmentation.models.losses import Loss
+from RoadPavementSegmentation.models.utilities import trainGenerator
 import os
 ###############################
 # Super-basic training routine
@@ -17,6 +17,8 @@ def train():
     #model = UNet4_res_asppWF_AG(number_of_kernels=32, input_size=(320, 320, 1), loss_function=Loss.CROSSENTROPY50DICE50)
     #model = UNet4_res_aspp_AG(number_of_kernels=32,input_size = (320,320,1), loss_function = Loss.CROSSENTROPY50DICE50)
     #model = UNet4_aspp(number_of_kernels=32, input_size=(320, 320, 1), loss_function=Loss.CROSSENTROPY50DICE50)
+    model = UNet5_res_aspp(number_of_kernels=32, input_size=(320, 320, 1), loss_function=Loss.CROSSENTROPY50DICE50)
+    model = UNet5_res(number_of_kernels=32, input_size=(320, 320, 1), loss_function=Loss.CROSSENTROPY50DICE50)
 
     # Where is your data?
     # This path should point to directory with folders 'Images' and 'Labels'
