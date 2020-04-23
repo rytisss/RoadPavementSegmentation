@@ -1,5 +1,5 @@
 from keras.callbacks import ModelCheckpoint
-from models.autoencoder import UNet4, UNet4_res, UNet4_res_asppWF, UNet4_res_aspp, UNet4_res_asppWF_AG, UNet4_res_aspp_AG, UNet5_res, UNet5_res_aspp
+from models.autoencoder import UNet4, UNet4_res, UNet4_res_asppWF, UNet4_res_aspp, UNet4_res_asppWF_AG, UNet4_res_aspp_AG, UNet5_res, UNet5_res_aspp, UNet5_res_aspp_First5x5, UNet5_res_First5x5
 from models.losses import Loss
 from models.utilities import trainGenerator
 import os
