@@ -1,5 +1,5 @@
 from keras.callbacks import ModelCheckpoint
-from models.autoencoder import UNet4, UNet4_res, UNet4_res_asppWF, UNet4_res_aspp, UNet4_res_asppWF_AG, UNet4_res_aspp_AG, UNet5_res_aspp, UNet5_res_aspp_First5x5, UNet5_res_First5x5, UNet5_First5x5
+from models.autoencoder import UNet4, UNet4_res, UNet4_res_asppWF, UNet4_res_aspp, UNet4_res_asppWF_AG, UNet4_res_aspp_AG, UNet5_res_aspp, UNet5_res_aspp_First5x5, UNet5_res_First5x5, UNet5_First5x5, UNet4_asspWF, UNet4_assp, UNet4_assp_First5x5, UNet4_asspWF_First5x5
 from models.losses import Loss
 from models.utilities import trainGenerator
 import os
@@ -40,8 +40,8 @@ def train():
 
     # Define model
     model = UNet5_First5x5(number_of_kernels=16,input_size = (480,480,1), loss_function = Loss.CROSSENTROPY50DICE50, learning_rate=1e-3)
-    #model = UNet4_res(number_of_kernels=32,input_size = (320,320,1), loss_function = Loss.CROSSENTROPY50DICE50, learning_rate=1e-3)
-    #model = UNet4_res_aspp(number_of_kernels=32, input_size=(320, 320, 1), loss_function=Loss.CROSSENTROPY50DICE50, learning_rate=1e-3)
+    model = UNet4_assp_First5x5(number_of_kernels=32,input_size = (320,320,1), loss_function = Loss.CROSSENTROPY50DICE50, learning_rate=1e-3)
+    model = UNet4_asspWF_First5x5(number_of_kernels=32, input_size=(320, 320, 1), loss_function=Loss.CROSSENTROPY50DICE50, learning_rate=1e-3)
     #model = UNet4_res_asppWF(number_of_kernels=32, input_size=(320, 320, 1), loss_function=Loss.CROSSENTROPY50DICE50, learning_rate=1e-3)
     #model = UNet4_res_asppWF_AG(number_of_kernels=32, input_size=(320, 320, 1), loss_function=Loss.CROSSENTROPY50DICE50, learning_rate=1e-3)
     #model = UNet4_res_aspp_AG(number_of_kernels=32,input_size = (320,320,1), loss_function = Loss.CROSSENTROPY50DICE50, learning_rate=1e-3)
