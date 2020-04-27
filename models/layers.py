@@ -27,6 +27,35 @@ def DecodingLayer(input,
     output = conv
     return output
 
+def DecodingLayer_AG(input,
+                  skippedInput,
+                  upSampleSize=2,
+                  kernels=8,
+                  kernel_size=3,
+                  batch_norm=True):
+    conv = Conv2D(kernels, kernel_size=(2, 2), padding='same', kernel_initializer='he_normal')(
+        UpSampling2D((upSampleSize, upSampleSize))(input))
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    conv = Activation('relu')(conv)
+    # add attention gate
+    attention_gate = AttentionBlock(conv, skippedInput, kernels)
+    #
+    concatenatedInput = concatenate([conv, attention_gate], axis=3)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(concatenatedInput)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    conv = Activation('relu')(conv)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    conv = Activation('relu')(conv)
+
+    output = conv
+    return output
+
 
 def DecodingLayerRes(input,
                      skippedInput,
