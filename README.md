@@ -1,6 +1,3 @@
-# Road Pavement Segmentation
-Repository for all the material related to road pavements defect segmentation. Main idea behind the segmentation is to create/approve/test various architectures (modification of autoencoders, such as U-Net and its modifications) to find the best to do the task. 
-
 # Improved Pixel-Level Pavement-Defect Segmentation Using a Deep Autoencoder [1]. <br />
 ## Article can be downloaded (open access) from https://www.mdpi.com/1424-8220/20/9/2557 <br />
 ## If you find code or ideas useful, please cite [1][2]
