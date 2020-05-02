@@ -2,17 +2,17 @@
 ## :scroll: Article can be downloaded (open access) from: <br /> https://www.mdpi.com/1424-8220/20/9/2557 <br />
 ### If you find code or ideas useful, please cite [[1]](#References),[[2]](#References)
 
-:exclamation: Information about training, prediction and computational performance can be found in the article :page_facing_up:.
+:fire: Information about training, prediction and computational performance can be found in the article :page_facing_up:.
 
-Solutions:
-1. UNet
-2. ResUNet
-3. ResUNet with Atrous Spatial Pyramid Pooling
-4. ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall" connections)
-5. ResUNet with Atrous Spatial Pyramid Pooling and Attention Gates
-6. ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall" connections) and Attention Gates
+:white_check_mark: Solutions:
+  * 1. UNet
+  * 2. ResUNet
+  * 3. ResUNet with Atrous Spatial Pyramid Pooling
+  * 4. ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall" connections)
+  * 5. ResUNet with Atrous Spatial Pyramid Pooling and Attention Gates
+  * 6. ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall" connections) and Attention Gates
 
-It is not all! Feel free to make your own configuration using neural network block, defined in 'models/layers.py' file . You may find even more architectural solutions in the code than we mentioned :point_up: :eyes: :point_up:.
+:warning: It is not all! Feel free to make your own configuration using neural network block, defined in 'models/layers.py' file . You may find even more architectural solutions in the code than we mentioned :point_up: :eyes: :point_up:.
 
 ## Baseline model:  
 <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/UNet4.png" width="900"/>  
