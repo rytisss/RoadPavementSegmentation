@@ -8,9 +8,9 @@
   *  UNet
   *  ResUNet
   *  ResUNet with Atrous Spatial Pyramid Pooling
-  *  ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall"[[3]](#References) connections)
+  *  ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall"[[3]](#References) connection)
   *  ResUNet with Atrous Spatial Pyramid Pooling and Attention Gates
-  *  ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall"[[3]](#References) connections) and Attention Gates
+  *  ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall"[[3]](#References) connection) and Attention Gates
 
 :warning: It is not all! Feel free to make your own configuration using neural network block, defined in 'models/layers.py' :snake: file . You may find even more architectural solutions in the code than we mentioned :point_up: :eyes: :point_up:.
 
