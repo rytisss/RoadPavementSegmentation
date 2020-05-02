@@ -23,16 +23,16 @@
 ## Few results with different architectures:
 <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_.png" width="425"/> <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_label_.png" width="425"/> <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_unet_.png" width="425"/>  <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_unetResWF_.png" width="425"/> 
 
-Third-party library priorities: 
-1. Tensorflow (with Keras frontend)
-2. OpenCV
-3. Many nifty things related to Python programming language
+## Third-party library priorities: 
+ * Tensorflow (with Keras frontend)
+ * OpenCV
+ * Many nifty things related to Python programming language
 
 ## Usage:  
-### Everything is straight-forward. Check comments in the code!  
-train.py - train  
-predict.py - predict  
-predict_by_patches.py - predict a big image by cropping it into regions and joining them after  
+### Everything is straight-forward. Check comments in the code :eyes: 
+ * train.py - train  
+ * predict.py - predict  
+ * predict_by_patches.py - predict a big image by cropping it into regions and joining them after  
 
 # Rendered video results:  
 ---------------------  
