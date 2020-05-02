@@ -6,9 +6,10 @@ Repository for all the material related to road pavements defect segmentation. M
 Solutions:
 1. UNet
 2. ResUNet
-2. ResUNet with Atrous Spatial Pyramid Pooling
-3. ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall" connections)
-4. ResUNet with Attention Gates
+3. ResUNet with Atrous Spatial Pyramid Pooling
+4. ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall" connections)
+5. ResUNet with Atrous Spatial Pyramid Pooling and Attention Gates
+6. ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall" connections) and Attention Gates
 
 ## Baseline model:  
 <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/UNet4.png" width="900"/>  
