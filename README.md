@@ -8,9 +8,9 @@
   *  UNet
   *  ResUNet
   *  ResUNet with Atrous Spatial Pyramid Pooling
-  *  ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall" connections)
+  *  ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall"[[3]](#References) connections)
   *  ResUNet with Atrous Spatial Pyramid Pooling and Attention Gates
-  *  ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall" connections) and Attention Gates
+  *  ResUNet with Atrous Spatial Pyramid Pooling ("Waterfall"[[3]](#References) connections) and Attention Gates
 
 :warning: It is not all! Feel free to make your own configuration using neural network block, defined in 'models/layers.py' :snake: file . You may find even more architectural solutions in the code than we mentioned :point_up: :eyes: :point_up:.
 
@@ -49,3 +49,4 @@
   ## References
   [1] Augustauskas, R.; Lipnickas, A. Improved Pixel-Level Pavement-Defect Segmentation Using a Deep Autoencoder. Sensors 2020, 20, 2557. <br />
   [2] Augustaukas, R.; Lipnickas, A. Pixel-wise Road Pavement Defects Detection Using U-Net Deep Neural Network. In Proceedings of the 2019 10th IEEE International Conference on Intelligent Data Acquisition and Advanced Computing Systems: Technology and Applications (IDAACS), Metz, France, 18–21 September 2019; IEEE: Metz, France, 2019; pp. 468–472 <br />
+  [3] Artacho, B.; Savakis, A. Waterfall Atrous Spatial Pooling Architecture for Efficient Semantic Segmentation. Sensors 2019, 19, 5361. <br />
