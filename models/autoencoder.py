@@ -1,7 +1,7 @@
 # 5-layer UNet
 from keras.models import *
 from keras.optimizers import *
-from keras.utils.vis_utils import plot_model
+#from keras.utils.vis_utils import plot_model
 from keras.layers import *
 
 from models.layers import AtrousSpatialPyramidWaterFallPool, DecodingLayerAG_Res, AtrousSpatialPyramidPool, \
@@ -82,7 +82,7 @@ def UNet4(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet4.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet4.png', show_shapes=True, show_layer_names=True)
     return model
 
 def UNet5_First5x5(pretrained_weights=None,
@@ -128,7 +128,7 @@ def UNet5_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
 def UNet4_res(pretrained_weights=None,
@@ -172,7 +172,7 @@ def UNet4_res(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet4_res.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet4_res.png', show_shapes=True, show_layer_names=True)
     return model
 
 def UNet4_assp(pretrained_weights=None,
@@ -216,7 +216,7 @@ def UNet4_assp(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet4_assp.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet4_assp.png', show_shapes=True, show_layer_names=True)
     return model
 
 def UNet4_asspWF(pretrained_weights=None,
@@ -260,7 +260,7 @@ def UNet4_asspWF(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet4_asspWF.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet4_asspWF.png', show_shapes=True, show_layer_names=True)
     return model
 
 def UNet4_assp_First5x5(pretrained_weights=None,
@@ -304,7 +304,7 @@ def UNet4_assp_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet4_assp_First5x5.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet4_assp_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
 def UNet4_asspWF_First5x5(pretrained_weights=None,
@@ -348,7 +348,7 @@ def UNet4_asspWF_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet4_asspWF_First5x5.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet4_asspWF_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
 
@@ -393,7 +393,7 @@ def UNet4_assp_AG_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet4_assp_AG_First5x5.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet4_assp_AG_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
 def UNet4_asspWF_AG_First5x5(pretrained_weights=None,
@@ -437,7 +437,7 @@ def UNet4_asspWF_AG_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet4_asspWF_AG_First5x5.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet4_asspWF_AG_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
 def UNet5_res(pretrained_weights=None,
@@ -485,7 +485,7 @@ def UNet5_res(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet5_res.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet5_res.png', show_shapes=True, show_layer_names=True)
     return model
 
 def UNet5_res_First5x5(pretrained_weights=None,
@@ -533,7 +533,7 @@ def UNet5_res_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet5_res_First5x5.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet5_res_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
 
@@ -579,7 +579,7 @@ def UNet4_res_dense_aspp(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet4_res_dense_aspp.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet4_res_dense_aspp.png', show_shapes=True, show_layer_names=True)
     return model
 
 ###############3
@@ -626,7 +626,7 @@ def UNet4_res_aspp(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
     return model
 
 ###############3
@@ -676,7 +676,7 @@ def UNet5_res_aspp(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet5_res_aspp.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet5_res_aspp.png', show_shapes=True, show_layer_names=True)
     return model
 
 def UNet5_res_aspp_First5x5(pretrained_weights=None,
@@ -725,7 +725,7 @@ def UNet5_res_aspp_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet5_res_aspp_First5x5.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet5_res_aspp_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
 def UNet4_res_aspp_AG(pretrained_weights=None,
@@ -771,7 +771,7 @@ def UNet4_res_aspp_AG(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet4_res_aspp_AG.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet4_res_aspp_AG.png', show_shapes=True, show_layer_names=True)
     return model
 
 def UNet4_res_asppWF_AG(pretrained_weights=None,
@@ -817,7 +817,7 @@ def UNet4_res_asppWF_AG(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet4_res_asppWF_AG.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet4_res_asppWF_AG.png', show_shapes=True, show_layer_names=True)
     return model
 
 def UNet4_res_asppWF(pretrained_weights=None,
@@ -863,5 +863,5 @@ def UNet4_res_asppWF(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    plot_model(model, to_file='UNet4_res_asppWF.png', show_shapes=True, show_layer_names=True)
+    #plot_model(model, to_file='UNet4_res_asppWF.png', show_shapes=True, show_layer_names=True)
     return model
