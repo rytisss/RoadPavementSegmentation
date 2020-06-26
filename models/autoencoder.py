@@ -1,8 +1,6 @@
-# 5-layer UNet
-from keras.models import *
-from keras.optimizers import *
-#from keras.utils.vis_utils import plot_model
-from keras.layers import *
+from tensorflow.keras.models import *
+from tensorflow.keras.optimizers import *
+from tensorflow.keras.layers import *
 
 from models.layers import AtrousSpatialPyramidWaterFallPool, DecodingLayerAG_Res, AtrousSpatialPyramidPool, \
     EncodingLayer, DecodingLayer, DecodingLayerRes, EncodingLayerResAddOp, TripleDenseBottleneck, DecodingLayer_AG
