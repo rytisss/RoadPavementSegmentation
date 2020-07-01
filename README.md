@@ -21,7 +21,7 @@
 <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/UNet4AsppAGRes.png" width="900"/>  
 
 ## Few results with different architectures:
-<img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_.png" width="425"/> <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_label_.png" width="425"/> <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_unet_.png" width="425"/>  <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_unetResWF_.png" width="425"/> 
+<img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_.png" width="400"/> <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_label_.png" width="400"/> <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_unet_.png" width="400"/>  <img src="https://github.com/rytisss/RoadPavementSegmentation/blob/master/res/20160222_164000_crack500_unetResWF_.png" width="400"/> 
 
 ## Third-party library priorities: 
  * Tensorflow (with Keras frontend)
