@@ -1,6 +1,7 @@
 from tensorflow.keras.models import *
 from tensorflow.keras.optimizers import *
 from tensorflow.keras.layers import *
+from models.coord import *
 
 def DecodingLayer(input,
                   skippedInput,
@@ -77,6 +78,39 @@ def DecodingLayerRes(input,
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     conv = Activation('relu')(conv)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    # add shortcut
+    conv = Add()([conv, shortcut])
+
+    conv = Activation('relu')(conv)
+    output = conv
+    return output
+
+def DecodingCoordConvLayerRes(input,
+                     skippedInput,
+                     upSampleSize=2,
+                     kernels=8,
+                     kernel_size=3,
+                     batch_norm=True):
+    conv = CoordinateChannel2D()(input)
+    conv = Conv2D(kernels, kernel_size=(2, 2), padding='same', kernel_initializer='he_normal')(
+        UpSampling2D((upSampleSize, upSampleSize))(conv))
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    conv = Activation('relu')(conv)
+    concatenatedInput = concatenate([conv, skippedInput], axis=3)
+    # shortcut
+    concatenatedInput = CoordinateChannel2D()(concatenatedInput)
+    shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(concatenatedInput)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(concatenatedInput)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    conv = Activation('relu')(conv)
+    conv = CoordinateChannel2D()(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
@@ -169,6 +203,39 @@ def EncodingLayer(input,
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     conv = Activation('relu')(conv)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    conv = Activation('relu')(conv)
+    # Max-pool on demand
+    if max_pool == True:
+        oppositeConnection = conv
+        output = MaxPooling2D(pool_size=(max_pool_size, max_pool_size))(conv)
+    else:
+        oppositeConnection = conv
+        output = conv
+    # in next step this output needs to be activated
+    return oppositeConnection, output
+
+#CoordConv layers
+def EncodingCoordConvLayer(input,
+                  kernels=8,
+                  kernel_size=3,
+                  stride=1,
+                  max_pool=True,
+                  max_pool_size=2,
+                  batch_norm=True,
+                  isInput=False):
+    # Double convolution according to U-Net structure
+    conv = CoordinateChannel2D()(input)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=stride, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    # Batch-normalization on demand
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    conv = Activation('relu')(conv)
+    conv = CoordinateChannel2D()(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
@@ -321,6 +388,50 @@ def EncodingLayerResAddOp(input,
     # in next step this output needs to be activated
     return oppositeConnection, output
 
+def EncodingCoordConvLayerResAddOp(input,
+                          kernels=8,
+                          kernel_size=3,
+                          stride=1,
+                          max_pool=True,
+                          max_pool_size=2,
+                          batch_norm=True,
+                          isInput=False):
+    # Double convolution according to U-Net structure
+    conv = CoordinateChannel2D()(input)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=stride, padding='same',
+                  kernel_initializer='he_normal')(conv)
+
+    # calculate how many times
+    downscale = stride
+    input_coord = CoordinateChannel2D()(input)
+    shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(input_coord)
+    if downscale != 1:
+        shortcut = MaxPooling2D(pool_size=(downscale, downscale))(shortcut)
+
+    # Batch-normalization on demand
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    conv = Activation('relu')(conv)
+    conv = CoordinateChannel2D()(conv)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+
+    # add shortcut
+    conv = Add()([conv, shortcut])
+
+    conv = Activation('relu')(conv)
+    # Max-pool on demand
+    if max_pool == True:
+        oppositeConnection = conv
+        output = MaxPooling2D(pool_size=(max_pool_size, max_pool_size))(conv)
+    else:
+        oppositeConnection = conv
+        output = conv
+    # in next step this output needs to be activated
+    return oppositeConnection, output
+
 def TripleDenseBottleneck(input,
                     kernels=8,
                     kernel_size=3):
@@ -406,6 +517,52 @@ def AtrousSpatialPyramidPool(input,
     output = concatenate([dilate1, dilate2, dilate3, pool])
 
     #perform parameters reduction with 1x1
+    output = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same',
+                    kernel_initializer='he_normal')(output)
+    output = BatchNormalization()(output)
+    output = Activation('relu')(output)
+
+    return output
+
+
+def AtrousSpatialPyramidPoolCoordConv(input,
+                          kernels=8,
+                          kernel_size=3):
+
+
+
+    # dilate = 1
+    input_coord_1 = CoordinateChannel2D()(input)
+    dilate1 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=1, kernel_initializer='he_normal')(input_coord_1)
+    dilate1 = BatchNormalization()(dilate1)
+    dilate1 = Activation('relu')(dilate1)
+
+    # dilate = 2
+    input_coord_2 = CoordinateChannel2D()(input)
+    dilate2 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=2, kernel_initializer='he_normal')(input_coord_2)
+    dilate2 = BatchNormalization()(dilate2)
+    dilate2 = Activation('relu')(dilate2)
+
+    # dilate = 3
+    input_coord_3 = CoordinateChannel2D()(input)
+    dilate3 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=4, kernel_initializer='he_normal')(input_coord_3)
+    dilate3 = BatchNormalization()(dilate3)
+    dilate3 = Activation('relu')(dilate3)
+
+    H, W, n_ch = input.shape.as_list()[1:]
+    pool = AveragePooling2D(pool_size=(H, W))(input)
+    pool = UpSampling2D((H, W), interpolation='bilinear')(pool)
+
+    # pool
+    #pool = AveragePooling2D(pool_size=(3, 3), strides=(1,1), padding='same')(input)
+    #averaged_pool = Conv2D(kernels, 1, strides=(1,1), padding='same', kernel_initializer='he_normal')(input)
+    #conv = BatchNormalization()(conv)
+    #conv = Activation('relu')(conv)
+
+    output = concatenate([dilate1, dilate2, dilate3, pool])
+
+    #perform parameters reduction with 1x1
+    output = CoordinateChannel2D()(output)
     output = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same',
                     kernel_initializer='he_normal')(output)
     output = BatchNormalization()(output)

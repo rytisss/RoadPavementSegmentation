@@ -1,8 +1,8 @@
 from enum import Enum
 import numpy as np
 from scipy.ndimage import distance_transform_edt as distance
-import keras as K
 import tensorflow as tf
+import tensorflow.keras as K
 
 
 # Define all possible losses
