@@ -10,7 +10,7 @@ import os
 ###############################
 
 # Directory for weight saving (creates if it does not exist)
-weights_output_dir = r'D:\drilledHolesDetection\drilled holes data for training\UNet4_res_assp_5x5_8k_320x320/'
+weights_output_dir = r'C:\Users\prorega\Desktop\drill holes results/'
 weights_output_name = 'UNet4_res_assp_5x5_8k_320x320'
 
 class CustomSaver(tf.keras.callbacks.Callback):
@@ -40,12 +40,12 @@ def train():
     number_of_epoch = 16
 
     # Define model
-    model = UNet4_res_aspp_First5x5(number_of_kernels=8,input_size = (320,320,1), loss_function = Loss.CROSSENTROPY50DICE50, learning_rate=1e-3)
+    model = UNet4_res_aspp_First5x5_CoordConv(number_of_kernels=8,input_size = (320,320,1), loss_function = Loss.CROSSENTROPY50DICE50, learning_rate=1e-3)
 
     # Where is your data?
     # This path should point to directory with folders 'Images' and 'Labels'
     # In each of mentioned folders should be image and annotations respectively
-    data_dir = r'D:\drilledHolesDetection\drilled holes data for training/'
+    data_dir = r'C:\Users\prorega\Desktop\drilled holes data for training/'
 
     # Possible 'on-the-flight' augmentation parameters
     data_gen_args = dict(rotation_range=0.0,

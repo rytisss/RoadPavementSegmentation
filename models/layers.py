@@ -1,7 +1,7 @@
 from tensorflow.keras.models import *
 from tensorflow.keras.optimizers import *
 from tensorflow.keras.layers import *
-from models.coord import *
+from models.customLayers import *
 
 def DecodingLayer(input,
                   skippedInput,
@@ -95,7 +95,7 @@ def DecodingCoordConvLayerRes(input,
                      kernels=8,
                      kernel_size=3,
                      batch_norm=True):
-    conv = CoordinateChannel2D()(input)
+    conv = AddCoords2D()(input)
     conv = Conv2D(kernels, kernel_size=(2, 2), padding='same', kernel_initializer='he_normal')(
         UpSampling2D((upSampleSize, upSampleSize))(conv))
     if batch_norm == True:
@@ -103,14 +103,14 @@ def DecodingCoordConvLayerRes(input,
     conv = Activation('relu')(conv)
     concatenatedInput = concatenate([conv, skippedInput], axis=3)
     # shortcut
-    concatenatedInput = CoordinateChannel2D()(concatenatedInput)
+    concatenatedInput = AddCoords2D()(concatenatedInput)
     shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(concatenatedInput)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(concatenatedInput)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     conv = Activation('relu')(conv)
-    conv = CoordinateChannel2D()(conv)
+    conv = AddCoords2D()(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
@@ -228,14 +228,14 @@ def EncodingCoordConvLayer(input,
                   batch_norm=True,
                   isInput=False):
     # Double convolution according to U-Net structure
-    conv = CoordinateChannel2D()(input)
+    conv = AddCoords2D()(input)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=stride, padding='same',
                   kernel_initializer='he_normal')(conv)
     # Batch-normalization on demand
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     conv = Activation('relu')(conv)
-    conv = CoordinateChannel2D()(conv)
+    conv = AddCoords2D()(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
@@ -397,13 +397,13 @@ def EncodingCoordConvLayerResAddOp(input,
                           batch_norm=True,
                           isInput=False):
     # Double convolution according to U-Net structure
-    conv = CoordinateChannel2D()(input)
+    conv = AddCoords2D()(input)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=stride, padding='same',
                   kernel_initializer='he_normal')(conv)
 
     # calculate how many times
     downscale = stride
-    input_coord = CoordinateChannel2D()(input)
+    input_coord = AddCoords2D()(input)
     shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(input_coord)
     if downscale != 1:
         shortcut = MaxPooling2D(pool_size=(downscale, downscale))(shortcut)
@@ -412,7 +412,7 @@ def EncodingCoordConvLayerResAddOp(input,
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     conv = Activation('relu')(conv)
-    conv = CoordinateChannel2D()(conv)
+    conv = AddCoords2D()(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
@@ -532,19 +532,19 @@ def AtrousSpatialPyramidPoolCoordConv(input,
 
 
     # dilate = 1
-    input_coord_1 = CoordinateChannel2D()(input)
+    input_coord_1 = AddCoords2D()(input)
     dilate1 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=1, kernel_initializer='he_normal')(input_coord_1)
     dilate1 = BatchNormalization()(dilate1)
     dilate1 = Activation('relu')(dilate1)
 
     # dilate = 2
-    input_coord_2 = CoordinateChannel2D()(input)
+    input_coord_2 = AddCoords2D()(input)
     dilate2 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=2, kernel_initializer='he_normal')(input_coord_2)
     dilate2 = BatchNormalization()(dilate2)
     dilate2 = Activation('relu')(dilate2)
 
     # dilate = 3
-    input_coord_3 = CoordinateChannel2D()(input)
+    input_coord_3 = AddCoords2D()(input)
     dilate3 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=4, kernel_initializer='he_normal')(input_coord_3)
     dilate3 = BatchNormalization()(dilate3)
     dilate3 = Activation('relu')(dilate3)
@@ -562,7 +562,7 @@ def AtrousSpatialPyramidPoolCoordConv(input,
     output = concatenate([dilate1, dilate2, dilate3, pool])
 
     #perform parameters reduction with 1x1
-    output = CoordinateChannel2D()(output)
+    output = AddCoords2D()(output)
     output = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same',
                     kernel_initializer='he_normal')(output)
     output = BatchNormalization()(output)
