@@ -18,7 +18,7 @@ class CustomSaver(tf.keras.callbacks.Callback):
         self.overallIteration = 0
     def on_batch_end(self, iteration, logs={}):
         self.overallIteration += 1
-        if self.overallIteration % 500 == 0 and self.overallIteration != 0:  # or save after some epoch, each k-th epoch etc.
+        if self.overallIteration % 5000 == 0 and self.overallIteration != 0:  # or save after some epoch, each k-th epoch etc.
             print('Saving iteration ' + str(self.overallIteration))
             self.model.save(weights_output_dir + weights_output_name + "_{}.hdf5".format(self.overallIteration))
 
