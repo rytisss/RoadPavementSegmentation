@@ -103,7 +103,6 @@ def DecodingCoordConvLayerRes(input,
     conv = Activation('relu')(conv)
     concatenatedInput = concatenate([conv, skippedInput], axis=3)
     # shortcut
-    concatenatedInput = AddCoords2D()(concatenatedInput)
     shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(concatenatedInput)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(concatenatedInput)
@@ -403,8 +402,7 @@ def EncodingCoordConvLayerResAddOp(input,
 
     # calculate how many times
     downscale = stride
-    input_coord = AddCoords2D()(input)
-    shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(input_coord)
+    shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(input)
     if downscale != 1:
         shortcut = MaxPooling2D(pool_size=(downscale, downscale))(shortcut)
 

@@ -10,7 +10,7 @@ import os
 ###############################
 
 # Directory for weight saving (creates if it does not exist)
-weights_output_dir = r'D:\drilled holes data for training\UNet4_res_assp_5x5_16k_320x320_coordConv/'
+weights_output_dir = r'D:\drilled holes data for training\UNet4_res_assp_5x5_16k_320x320_coordConv_v2/'
 weights_output_name = 'UNet4_res_assp_5x5_16k_320x320'
 
 class CustomSaver(tf.keras.callbacks.Callback):
