@@ -40,7 +40,12 @@ def train():
     number_of_epoch = 16
 
     # Define model
-    model = UNet4_res_aspp_First5x5_CoordConv(number_of_kernels=16,input_size = (320,320,1), loss_function = Loss.CROSSENTROPY50DICE50, learning_rate=1e-3)
+    model = UNet4_res_aspp_First5x5(number_of_kernels=16,
+                                    input_size = (320,320,1),
+                                    loss_function = Loss.CROSSENTROPY50DICE50,
+                                    learning_rate=1e-3,
+                                    useLeakyReLU=True,
+                                    LeakyReLU_alpha=0.1)
 
     # Where is your data?
     # This path should point to directory with folders 'Images' and 'Labels'

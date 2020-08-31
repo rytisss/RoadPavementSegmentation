@@ -636,32 +636,34 @@ def UNet4_res_aspp_First5x5(pretrained_weights=None,
                                 max_pool_size=2,
                                 batch_norm=True,
                                 loss_function=Loss.CROSSENTROPY,
+                                useLeakyReLU=True,
+                                LeakyReLU_alpha=0.1,
                                 learning_rate = 1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
     oppositeEnc0, enc0 = EncodingLayer(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm)
+                                       batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     oppositeEnc1, enc1 = EncodingLayerResAddOp(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm)
+                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     oppositeEnc2, enc2 = EncodingLayerResAddOp(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm)
+                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
 
     _, enc3 = EncodingLayerResAddOp(enc2, number_of_kernels * 8, kernel_size, stride, False,
-                                               max_pool_size, batch_norm)
-    assp = AtrousSpatialPyramidPool(enc3, number_of_kernels * 8, kernel_size)
+                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    assp = AtrousSpatialPyramidPool(enc3, number_of_kernels * 8, kernel_size, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
 
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingLayerRes(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm)
-    dec1 = DecodingLayerRes(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm)
-    dec0 = DecodingLayerRes(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm)
+    dec2 = DecodingLayerRes(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec1 = DecodingLayerRes(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = DecodingLayerRes(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
     if batch_norm:
         dec0 = BatchNormalization()(dec0)
-    dec0 = Activation('relu')(dec0)
+    dec0 = LeakyReLU(alpha=LeakyReLU_alpha)(dec0) if useLeakyReLU else Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
