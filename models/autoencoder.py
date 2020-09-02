@@ -2,11 +2,13 @@ from tensorflow.keras.models import *
 from tensorflow.keras.optimizers import *
 from tensorflow.keras.layers import *
 
-from models.layers import *
-from models.losses import Loss, cross_and_dice_loss, weighted_cross_and_dice_loss, dice_score, \
-    adjusted_weighted_bce_loss, weighted_bce_loss, FocalLoss, surface_loss, Active_Contour_Loss, binary_crossentropy, \
-    dice_loss
+import os,sys,inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0,parentdir)
 
+#from models.layers import *
+#from models.losses import *
 
 def CompileModel(model, lossFunction, learning_rate = 1e-3):
     if lossFunction == Loss.DICE:
