@@ -7,8 +7,8 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0,parentdir)
 
-#from models.layers import *
-#from models.losses import *
+from models.layers import *
+from models.losses import *
 
 def CompileModel(model, lossFunction, learning_rate = 1e-3):
     if lossFunction == Loss.DICE:
