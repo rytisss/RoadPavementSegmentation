@@ -1,11 +1,9 @@
 from tensorflow.keras.models import *
 from tensorflow.keras.optimizers import *
 from tensorflow.keras.layers import *
-from models.customLayers import *
-import os,sys,inspect
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0,parentdir)
+
+from .customLayers import *
+#from models.customLayers import *
 
 def DecodingLayer(input,
                   skippedInput,
@@ -98,7 +96,7 @@ def DecodingLayerRes(input,
     conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
     output = conv
     return output
-
+"""
 def DecodingLayerRes(input,
                      upSampleSize=2,
                      kernels=8,
@@ -128,6 +126,7 @@ def DecodingLayerRes(input,
     conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
     output = conv
     return output
+"""
 
 def DecodingCoordConvLayerRes(input,
                      skippedInput,

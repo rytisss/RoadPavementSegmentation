@@ -2,13 +2,8 @@ from tensorflow.keras.models import *
 from tensorflow.keras.optimizers import *
 from tensorflow.keras.layers import *
 
-import os,sys,inspect
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0,parentdir)
-
-from models.layers import *
 from models.losses import *
+from models.layers import *
 
 def CompileModel(model, lossFunction, learning_rate = 1e-3):
     if lossFunction == Loss.DICE:
@@ -687,36 +682,32 @@ def UNet4_res_aspp_First5x5_CoordConv(pretrained_weights=None,
                                 max_pool_size=2,
                                 batch_norm=True,
                                 loss_function=Loss.CROSSENTROPY,
-                                learning_rate = 1e-3,
-                                useLeakyReLU = False):
+                                learning_rate = 1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
     oppositeEnc0, enc0 = EncodingCoordConvLayer(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU)
+                                       batch_norm)
     oppositeEnc1, enc1 = EncodingCoordConvLayerResAddOp(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm, useLeakyReLU)
+                                               max_pool_size, batch_norm)
     oppositeEnc2, enc2 = EncodingCoordConvLayerResAddOp(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm, useLeakyReLU)
+                                               max_pool_size, batch_norm)
 
     _, enc3 = EncodingCoordConvLayerResAddOp(enc2, number_of_kernels * 8, kernel_size, stride, False,
-                                               max_pool_size, batch_norm, useLeakyReLU)
-    assp = AtrousSpatialPyramidPoolCoordConv(enc3, number_of_kernels * 8, kernel_size, useLeakyReLU)
+                                               max_pool_size, batch_norm)
+    assp = AtrousSpatialPyramidPoolCoordConv(enc3, number_of_kernels * 8, kernel_size)
 
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingCoordConvLayerRes(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU)
-    dec1 = DecodingCoordConvLayerRes(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU)
-    dec0 = DecodingCoordConvLayerRes(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU)
+    dec2 = DecodingCoordConvLayerRes(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm)
+    dec1 = DecodingCoordConvLayerRes(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm)
+    dec0 = DecodingCoordConvLayerRes(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
     if batch_norm:
         dec0 = BatchNormalization()(dec0)
-    if (useLeakyReLU):
-        dec0 = LeakyReLU(alpha=0.1)(dec0)
-    else:
-        dec0 = Activation('relu')(dec0)
+    dec0 = Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
