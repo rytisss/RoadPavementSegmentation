@@ -40,17 +40,16 @@ def train():
     number_of_epoch = 16
 
     # Define model
-    model = UNet4_res_aspp_First5x5(number_of_kernels=16,
+    model = UNet4_res_aspp_First5x5_CoordConv(number_of_kernels=16,
                                     input_size = (320,320,1),
                                     loss_function = Loss.CROSSENTROPY50DICE50,
                                     learning_rate=1e-3,
-                                    useLeakyReLU=True,
-                                    LeakyReLU_alpha=0.1)
+                                    useLeakyReLU=True)
 
     # Where is your data?
     # This path should point to directory with folders 'Images' and 'Labels'
     # In each of mentioned folders should be image and annotations respectively
-    data_dir = r'D:\drilled holes data for training/'
+    data_dir = r'D:\holesData/'
 
     # Possible 'on-the-flight' augmentation parameters
     data_gen_args = dict(rotation_range=0.0,
@@ -62,7 +61,7 @@ def train():
                          fill_mode='nearest')
 
     # Define data generator that will take images from directory
-    generator = trainGenerator(batch_size, data_dir, 'images', 'labels', data_gen_args, save_to_dir = None, target_size = (320,320))
+    generator = trainGenerator(batch_size, data_dir, 'Image_rois', 'Label_rois', data_gen_args, save_to_dir = None, target_size = (320,320))
 
     if not os.path.exists(weights_output_dir):
         print('Output directory doesnt exist!\n')
