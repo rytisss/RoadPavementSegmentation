@@ -1,9 +1,5 @@
-from tensorflow.keras.models import *
-from tensorflow.keras.optimizers import *
 from tensorflow.keras.layers import *
-
 from .customLayers import *
-#from models.customLayers import *
 
 def DecodingLayer(input,
                   skippedInput,

@@ -38,13 +38,14 @@ def train():
     batch_size = 4
     # number_of_epoch. How many epoch you want to train?
     number_of_epoch = 16
-
+    print("Constructing model!")
     # Define model
-    model = UNet4_res_aspp_First5x5_CoordConv(number_of_kernels=16,
+    model = UNet4_res_aspp_First5x5(number_of_kernels=16,
                                     input_size = (320,320,1),
                                     loss_function = Loss.CROSSENTROPY50DICE50,
                                     learning_rate=1e-3,
                                     useLeakyReLU=True)
+    print("Model constructed!")
 
     # Where is your data?
     # This path should point to directory with folders 'Images' and 'Labels'
@@ -76,7 +77,7 @@ def train():
     learning_rate_scheduler = tf.keras.callbacks.LearningRateScheduler(scheduler)
     # Make checkpoint for saving each
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(weights_name, monitor='loss',verbose=1, save_best_only=False, save_weights_only=False)
-    model.fit_generator(generator,steps_per_epoch=number_of_iteration,epochs=number_of_epoch,callbacks=[model_checkpoint, saver, learning_rate_scheduler], shuffle = True)
+    model.fit(generator,steps_per_epoch=number_of_iteration,epochs=number_of_epoch,callbacks=[model_checkpoint, saver, learning_rate_scheduler], shuffle = True)
 
 def main():
     train()
