@@ -99,6 +99,36 @@ def DecodingLayerRes(input,
     output = conv
     return output
 
+def DecodingLayerRes(input,
+                     upSampleSize=2,
+                     kernels=8,
+                     kernel_size=3,
+                     batch_norm=True,
+                     useLeakyReLU=False,
+                     leakyReLU_alpha=0.3):
+    conv = Conv2D(kernels, kernel_size=(2, 2), padding='same', kernel_initializer='he_normal')(
+        UpSampling2D((upSampleSize, upSampleSize))(input))
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    # shortcut
+    shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(conv)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    # add shortcut
+    conv = Add()([conv, shortcut])
+
+    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    output = conv
+    return output
+
 def DecodingCoordConvLayerRes(input,
                      skippedInput,
                      upSampleSize=2,
