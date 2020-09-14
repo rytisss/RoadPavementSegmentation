@@ -2,8 +2,8 @@ from tensorflow.keras.models import *
 from tensorflow.keras.optimizers import *
 from tensorflow.keras.layers import *
 
-from models.losses import *
-from models.layers import *
+from .losses import *
+from .layers import *
 
 def CompileModel(model, lossFunction, learning_rate = 1e-3):
     if lossFunction == Loss.DICE:
