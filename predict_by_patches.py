@@ -24,17 +24,17 @@ def predict_by_patches():
     input_size = (320, 320)
 
     # Weights path
-    path_to_weights = r'D:\drilled holes data for training\UNet4_res_assp_5x5_16k_320x320_coordConv/'
+    path_to_weights = r'D:\drilled holes data for training\UNet4_res_assp_5x5_16k_320x320_leaky//'
 
     # Output path
-    output_path = r'D:\drilled holes data for training\UNet4_res_assp_5x5_16k_320x320_coordConv_res/'
+    output_path = r'D:\drilled holes data for training\UNet4_res_assp_5x5_16k_320x320_leaky//'
 
     weights = glob.glob(path_to_weights + '*.hdf5')
     for weight in weights:
 
         # Choose your 'super-model'
-        model = UNet4_res_aspp_First5x5_CoordConv(pretrained_weights=weight, number_of_kernels=16, input_size=(320, 320, 1),
-                                  loss_function=Loss.CROSSENTROPY50DICE50)
+        model = UNet4_res_aspp_First5x5(pretrained_weights=weight, number_of_kernels=16, input_size=(320, 320, 1),
+                                  loss_function=Loss.CROSSENTROPY50DICE50, useLeakyReLU=True)
 
         # Test images directory
         test_images = r'D:\test\Data_with_gamma_correction/Image/'

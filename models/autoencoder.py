@@ -705,10 +705,10 @@ def UNet4_res_aspp_First5x5_CoordConv(pretrained_weights=None,
     dec1 = DecodingCoordConvLayerRes(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
     dec0 = DecodingCoordConvLayerRes(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
 
-    dec0 = LeakyReLU(alpha=LeakyReLU_alpha)(dec0) if useLeakyReLU else Activation('relu')(dec0)
     if batch_norm:
         dec0 = BatchNormalization()(dec0)
-    dec0 = Activation('relu')(dec0)
+
+    dec0 = LeakyReLU(alpha=LeakyReLU_alpha)(dec0) if useLeakyReLU else Activation('relu')(dec0)
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
     model = Model(inputs, outputs)
