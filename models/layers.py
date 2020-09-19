@@ -13,18 +13,27 @@ def DecodingLayer(input,
         UpSampling2D((upSampleSize, upSampleSize))(input))
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     concatenatedInput = concatenate([conv, skippedInput], axis=3)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(concatenatedInput)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
 
     output = conv
     return output
@@ -41,7 +50,10 @@ def DecodingLayer_AG(input,
         UpSampling2D((upSampleSize, upSampleSize))(input))
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     # add attention gate
     attention_gate = AttentionBlock(conv, skippedInput, kernels)
     #
@@ -50,12 +62,18 @@ def DecodingLayer_AG(input,
                   kernel_initializer='he_normal')(concatenatedInput)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
 
     output = conv
     return output
@@ -73,7 +91,10 @@ def DecodingLayerRes(input,
         UpSampling2D((upSampleSize, upSampleSize))(input))
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     concatenatedInput = concatenate([conv, skippedInput], axis=3)
     # shortcut
     shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(concatenatedInput)
@@ -81,7 +102,10 @@ def DecodingLayerRes(input,
                   kernel_initializer='he_normal')(concatenatedInput)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
@@ -89,7 +113,10 @@ def DecodingLayerRes(input,
     # add shortcut
     conv = Add()([conv, shortcut])
 
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     output = conv
     return output
 """
@@ -137,7 +164,10 @@ def DecodingCoordConvLayerRes(input,
         UpSampling2D((upSampleSize, upSampleSize))(conv))
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     concatenatedInput = concatenate([conv, skippedInput], axis=3)
     # shortcut
     shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(concatenatedInput)
@@ -145,7 +175,10 @@ def DecodingCoordConvLayerRes(input,
                   kernel_initializer='he_normal')(concatenatedInput)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = AddCoords2D()(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
@@ -154,7 +187,10 @@ def DecodingCoordConvLayerRes(input,
     # add shortcut
     conv = Add()([conv, shortcut])
 
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     output = conv
     return output
 
@@ -170,7 +206,10 @@ def DecodingLayerAG_Res(input,
         UpSampling2D((upSampleSize, upSampleSize))(input))
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     #add attention gate
     attention_gate = AttentionBlock(conv, skippedInput, kernels)
     #
@@ -181,7 +220,10 @@ def DecodingLayerAG_Res(input,
                   kernel_initializer='he_normal')(concatenatedInput)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
@@ -189,7 +231,10 @@ def DecodingLayerAG_Res(input,
     # add shortcut
     conv = Add()([conv, shortcut])
 
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     output = conv
     return output
 
@@ -207,7 +252,10 @@ def DecodingLayerConcRes(input,
         UpSampling2D((upSampleSize, upSampleSize))(input))
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     concatenatedInput = concatenate([conv, skippedInput], axis=3)
     # shortcut with concat
     shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(
@@ -216,14 +264,20 @@ def DecodingLayerConcRes(input,
                   kernel_initializer='he_normal')(concatenatedInput)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     # add shortcut
     conv = Add()([conv, shortcut])
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     output = conv
     return output
 
@@ -243,12 +297,18 @@ def EncodingLayer(input,
     # Batch-normalization on demand
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     # Max-pool on demand
     if max_pool == True:
         oppositeConnection = conv
@@ -276,13 +336,19 @@ def EncodingCoordConvLayer(input,
     # Batch-normalization on demand
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = AddCoords2D()(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     # Max-pool on demand
     if max_pool == True:
         oppositeConnection = conv
@@ -309,17 +375,26 @@ def EncodingLayerTripple(input,
     # Batch-normalization on demand
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     # Max-pool on demand
     if max_pool == True:
         oppositeConnection = conv
@@ -346,22 +421,34 @@ def EncodingLayerQuad(input,
     # Batch-normalization on demand
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
 
     # Max-pool on demand
     if max_pool == True:
@@ -413,7 +500,10 @@ def EncodingLayerResAddOp(input,
     # Batch-normalization on demand
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
@@ -422,7 +512,10 @@ def EncodingLayerResAddOp(input,
     # add shortcut
     conv = Add()([conv, shortcut])
 
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     # Max-pool on demand
     if max_pool == True:
         oppositeConnection = conv
@@ -456,7 +549,10 @@ def EncodingCoordConvLayerResAddOp(input,
     # Batch-normalization on demand
     if batch_norm == True:
         conv = BatchNormalization()(conv)
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     conv = AddCoords2D()(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
@@ -466,7 +562,10 @@ def EncodingCoordConvLayerResAddOp(input,
     # add shortcut
     conv = Add()([conv, shortcut])
 
-    conv = LeakyReLU(alpha=leakyReLU_alpha)(conv) if useLeakyReLU else Activation('relu')(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
     # Max-pool on demand
     if max_pool == True:
         oppositeConnection = conv
@@ -487,12 +586,18 @@ def TripleDenseBottleneck(input,
     input_1 = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same',
                   kernel_initializer='he_normal')(input)
     input_1 = BatchNormalization()(input_1)
-    input_1 = LeakyReLU(alpha=leakyReLU_alpha)(input_1) if useLeakyReLU else Activation('relu')(input_1)
+    if useLeakyReLU:
+        input_1 = LeakyReLU(alpha=leakyReLU_alpha)(input_1)
+    else:
+        input_1 = Activation('relu')(input_1)
     #First
     conv1 = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(input_1)
     conv1 = BatchNormalization()(conv1)
-    conv1 = LeakyReLU(alpha=leakyReLU_alpha)(conv1) if useLeakyReLU else Activation('relu')(conv1)
+    if useLeakyReLU:
+        conv1 = LeakyReLU(alpha=leakyReLU_alpha)(conv1)
+    else:
+        conv1 = Activation('relu')(conv1)
 
     #input to second layer
     input_2 = concatenate([input_1, conv1])
@@ -500,12 +605,18 @@ def TripleDenseBottleneck(input,
     input_2 = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same',
                      kernel_initializer='he_normal')(input_2)
     input_2 = BatchNormalization()(input_2)
-    input_2 = LeakyReLU(alpha=leakyReLU_alpha)(input_2) if useLeakyReLU else Activation('relu')(input_2)
+    if useLeakyReLU:
+        input_2 = LeakyReLU(alpha=leakyReLU_alpha)(input_2)
+    else:
+        input_2 = Activation('relu')(input_2)
 
     conv2 = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(input_2)
     conv2 = BatchNormalization()(conv2)
-    conv2 = LeakyReLU(alpha=leakyReLU_alpha)(conv2) if useLeakyReLU else Activation('relu')(conv2)
+    if useLeakyReLU:
+        conv2 = LeakyReLU(alpha=leakyReLU_alpha)(conv2)
+    else:
+        conv2 = Activation('relu')(conv2)
 
 
     #input to third layer
@@ -514,12 +625,18 @@ def TripleDenseBottleneck(input,
     input_3 = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same',
                    kernel_initializer='he_normal')(input_3)
     input_3 = BatchNormalization()(input_3)
-    input_3 = LeakyReLU(alpha=leakyReLU_alpha)(input_3) if useLeakyReLU else Activation('relu')(input_3)
+    if useLeakyReLU:
+        input_3 = LeakyReLU(alpha=leakyReLU_alpha)(input_3)
+    else:
+        input_3 = Activation('relu')(input_3)
 
     conv3 = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                    kernel_initializer='he_normal')(input_3)
     conv3 = BatchNormalization()(conv3)
-    conv3 = LeakyReLU(alpha=leakyReLU_alpha)(conv3) if useLeakyReLU else Activation('relu')(conv3)
+    if useLeakyReLU:
+        conv3 = LeakyReLU(alpha=leakyReLU_alpha)(conv3)
+    else:
+        conv3 = Activation('relu')(conv3)
 
     output = concatenate([input_1, conv1, conv2, conv3])
 
@@ -527,7 +644,10 @@ def TripleDenseBottleneck(input,
     output = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same',
                   kernel_initializer='he_normal')(output)
     output = BatchNormalization()(output)
-    output = LeakyReLU(alpha=leakyReLU_alpha)(output) if useLeakyReLU else Activation('relu')(output)
+    if useLeakyReLU:
+        output = LeakyReLU(alpha=leakyReLU_alpha)(output)
+    else:
+        output = Activation('relu')(output)
 
     return output
 
@@ -540,17 +660,26 @@ def AtrousSpatialPyramidPool(input,
     # dilate = 1
     dilate1 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=1, kernel_initializer='he_normal')(input)
     dilate1 = BatchNormalization()(dilate1)
-    dilate1 = LeakyReLU(alpha=leakyReLU_alpha)(dilate1) if useLeakyReLU else Activation('relu')(dilate1)
+    if useLeakyReLU:
+        dilate1 = LeakyReLU(alpha=leakyReLU_alpha)(dilate1)
+    else:
+        dilate1 = Activation('relu')(dilate1)
 
     # dilate = 2
     dilate2 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=2, kernel_initializer='he_normal')(input)
     dilate2 = BatchNormalization()(dilate2)
-    dilate2 = LeakyReLU(alpha=leakyReLU_alpha)(dilate2) if useLeakyReLU else Activation('relu')(dilate2)
+    if useLeakyReLU:
+        dilate2 = LeakyReLU(alpha=leakyReLU_alpha)(dilate2)
+    else:
+        dilate2 = Activation('relu')(dilate2)
 
     # dilate = 3
     dilate3 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=4, kernel_initializer='he_normal')(input)
     dilate3 = BatchNormalization()(dilate3)
-    dilate3 = LeakyReLU(alpha=leakyReLU_alpha)(dilate3) if useLeakyReLU else Activation('relu')(dilate3)
+    if useLeakyReLU:
+        dilate3 = LeakyReLU(alpha=leakyReLU_alpha)(dilate3)
+    else:
+        dilate3 = Activation('relu')(dilate3)
 
     H, W, n_ch = input.shape.as_list()[1:]
     pool = AveragePooling2D(pool_size=(H, W))(input)
@@ -568,7 +697,10 @@ def AtrousSpatialPyramidPool(input,
     output = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same',
                     kernel_initializer='he_normal')(output)
     output = BatchNormalization()(output)
-    output = LeakyReLU(alpha=leakyReLU_alpha)(output) if useLeakyReLU else Activation('relu')(output)
+    if useLeakyReLU:
+        output = LeakyReLU(alpha=leakyReLU_alpha)(output)
+    else:
+        output = Activation('relu')(output)
 
     return output
 
@@ -583,19 +715,28 @@ def AtrousSpatialPyramidPoolCoordConv(input,
     input_coord_1 = AddCoords2D()(input)
     dilate1 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=1, kernel_initializer='he_normal')(input_coord_1)
     dilate1 = BatchNormalization()(dilate1)
-    dilate1 = LeakyReLU(alpha=leakyReLU_alpha)(dilate1) if useLeakyReLU else Activation('relu')(dilate1)
+    if useLeakyReLU:
+        dilate1 = LeakyReLU(alpha=leakyReLU_alpha)(dilate1)
+    else:
+        dilate1 = Activation('relu')(dilate1)
 
     # dilate = 2
     input_coord_2 = AddCoords2D()(input)
     dilate2 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=2, kernel_initializer='he_normal')(input_coord_2)
     dilate2 = BatchNormalization()(dilate2)
-    dilate2 = LeakyReLU(alpha=leakyReLU_alpha)(dilate2) if useLeakyReLU else Activation('relu')(dilate2)
+    if useLeakyReLU:
+        dilate2 = LeakyReLU(alpha=leakyReLU_alpha)(dilate2)
+    else:
+        dilate2 = Activation('relu')(dilate2)
 
     # dilate = 3
     input_coord_3 = AddCoords2D()(input)
     dilate3 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=4, kernel_initializer='he_normal')(input_coord_3)
     dilate3 = BatchNormalization()(dilate3)
-    dilate3 = LeakyReLU(alpha=leakyReLU_alpha)(dilate3) if useLeakyReLU else Activation('relu')(dilate3)
+    if useLeakyReLU:
+        dilate3 = LeakyReLU(alpha=leakyReLU_alpha)(dilate3)
+    else:
+        dilate3 = Activation('relu')(dilate3)
 
     H, W, n_ch = input.shape.as_list()[1:]
     pool = AveragePooling2D(pool_size=(H, W))(input)
@@ -614,7 +755,10 @@ def AtrousSpatialPyramidPoolCoordConv(input,
     output = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same',
                     kernel_initializer='he_normal')(output)
     output = BatchNormalization()(output)
-    output = LeakyReLU(alpha=leakyReLU_alpha)(output) if useLeakyReLU else Activation('relu')(output)
+    if useLeakyReLU:
+        output = LeakyReLU(alpha=leakyReLU_alpha)(output)
+    else:
+        output = Activation('relu')(output)
 
     return output
 
@@ -627,17 +771,26 @@ def AtrousSpatialPyramidWaterFallPool(input,
     # dilate = 1
     dilate1 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=1, kernel_initializer='he_normal')(input)
     dilate1 = BatchNormalization()(dilate1)
-    dilate1 = LeakyReLU(alpha=leakyReLU_alpha)(dilate1) if useLeakyReLU else Activation('relu')(dilate1)
+    if useLeakyReLU:
+        dilate1 = LeakyReLU(alpha=leakyReLU_alpha)(dilate1)
+    else:
+        dilate1 = Activation('relu')(dilate1)
 
     # dilate = 2
     dilate2 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=2, kernel_initializer='he_normal')(dilate1)
     dilate2 = BatchNormalization()(dilate2)
-    dilate2 = LeakyReLU(alpha=leakyReLU_alpha)(dilate2) if useLeakyReLU else Activation('relu')(dilate2)
+    if useLeakyReLU:
+        dilate2 = LeakyReLU(alpha=leakyReLU_alpha)(dilate2)
+    else:
+        dilate2 = Activation('relu')(dilate2)
 
     # dilate = 3
     dilate3 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=4, kernel_initializer='he_normal')(dilate2)
     dilate3 = BatchNormalization()(dilate3)
-    dilate3 = LeakyReLU(alpha=leakyReLU_alpha)(dilate3) if useLeakyReLU else Activation('relu')(dilate3)
+    if useLeakyReLU:
+        dilate3 = LeakyReLU(alpha=leakyReLU_alpha)(dilate3)
+    else:
+        dilate3 = Activation('relu')(dilate3)
 
     H, W, n_ch = input.shape.as_list()[1:]
     pool = AveragePooling2D(pool_size=(H, W))(input)
@@ -655,6 +808,9 @@ def AtrousSpatialPyramidWaterFallPool(input,
     output = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same',
                     kernel_initializer='he_normal')(output)
     output = BatchNormalization()(output)
-    output = LeakyReLU(alpha=leakyReLU_alpha)(output) if useLeakyReLU else Activation('relu')(output)
+    if useLeakyReLU:
+        output = LeakyReLU(alpha=leakyReLU_alpha)(output)
+    else:
+        output = Activation('relu')(output)
 
     return output
