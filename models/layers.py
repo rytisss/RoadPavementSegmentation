@@ -38,6 +38,46 @@ def DecodingLayer(input,
     output = conv
     return output
 
+def DecodingLayerCoordConv(input,
+                  skippedInput,
+                  upSampleSize=2,
+                  kernels=8,
+                  kernel_size=3,
+                  batch_norm=True,
+                  useLeakyReLU=False,
+                  leakyReLU_alpha = 0.3):
+    conv = AddCoords2D()(input)
+    conv = Conv2D(kernels, kernel_size=(2, 2), padding='same', kernel_initializer='he_normal')(
+        UpSampling2D((upSampleSize, upSampleSize))(conv))
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    concatenatedInput = concatenate([conv, skippedInput], axis=3)
+    conv = AddCoords2D()(concatenatedInput)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    conv = AddCoords2D()(conv)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+
+    output = conv
+    return output
+
 def DecodingLayer_AG(input,
                   skippedInput,
                   upSampleSize=2,
@@ -87,8 +127,9 @@ def DecodingLayerRes(input,
                      batch_norm=True,
                      useLeakyReLU=False,
                      leakyReLU_alpha=0.3):
+    conv = AddCoords2D()(input)
     conv = Conv2D(kernels, kernel_size=(2, 2), padding='same', kernel_initializer='he_normal')(
-        UpSampling2D((upSampleSize, upSampleSize))(input))
+        UpSampling2D((upSampleSize, upSampleSize))(conv))
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     if useLeakyReLU:
@@ -98,14 +139,16 @@ def DecodingLayerRes(input,
     concatenatedInput = concatenate([conv, skippedInput], axis=3)
     # shortcut
     shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(concatenatedInput)
+    conv = AddCoords2D()(concatenatedInput)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
-                  kernel_initializer='he_normal')(concatenatedInput)
+                  kernel_initializer='he_normal')(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     if useLeakyReLU:
         conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
     else:
         conv = Activation('relu')(conv)
+    conv = AddCoords2D()(conv)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     if batch_norm == True:
@@ -171,8 +214,9 @@ def DecodingCoordConvLayerRes(input,
     concatenatedInput = concatenate([conv, skippedInput], axis=3)
     # shortcut
     shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(concatenatedInput)
+    conv = AddCoords2D()(concatenatedInput)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
-                  kernel_initializer='he_normal')(concatenatedInput)
+                  kernel_initializer='he_normal')(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     if useLeakyReLU:
@@ -216,8 +260,9 @@ def DecodingLayerAG_Res(input,
     concatenatedInput = concatenate([conv, attention_gate], axis=3)
     # shortcut
     shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(concatenatedInput)
+    conv = AddCoords2D()(concatenatedInput)
     conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
-                  kernel_initializer='he_normal')(concatenatedInput)
+                  kernel_initializer='he_normal')(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     if useLeakyReLU:
