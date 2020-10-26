@@ -56,7 +56,7 @@ def DecodingFirstDeformableConv2DLayer(input,
         conv = Activation('relu')(conv)
     concatenatedInput = concatenate([conv, skippedInput], axis=3)
     conv = DeformableConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
-                  kernel_initializer='he_normal')(concatenatedInput)
+                  kernel_initializer='he_normal', num_deformable_group = 1)(concatenatedInput)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     if useLeakyReLU:
@@ -93,7 +93,7 @@ def DecodingBothDeformableConv2DLayer(input,
         conv = Activation('relu')(conv)
     concatenatedInput = concatenate([conv, skippedInput], axis=3)
     conv = DeformableConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
-                  kernel_initializer='he_normal')(concatenatedInput)
+                  kernel_initializer='he_normal', num_deformable_group = 1)(concatenatedInput)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     if useLeakyReLU:
@@ -101,7 +101,7 @@ def DecodingBothDeformableConv2DLayer(input,
     else:
         conv = Activation('relu')(conv)
     conv = DeformableConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
-                  kernel_initializer='he_normal')(conv)
+                  kernel_initializer='he_normal', num_deformable_group = 1)(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     if useLeakyReLU:
@@ -254,7 +254,7 @@ def DecodingFirstDeformableConv2DLayerRes(input,
     # shortcut
     shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(concatenatedInput)
     conv = DeformableConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
-                  kernel_initializer='he_normal')(concatenatedInput)
+                  kernel_initializer='he_normal', num_deformable_group = 1)(concatenatedInput)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     if useLeakyReLU:
@@ -295,7 +295,7 @@ def DecodingBothDeformableConv2DLayerRes(input,
     # shortcut
     shortcut = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same', kernel_initializer='he_normal')(concatenatedInput)
     conv = DeformableConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
-                  kernel_initializer='he_normal')(concatenatedInput)
+                  kernel_initializer='he_normal', num_deformable_group = 1)(concatenatedInput)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     if useLeakyReLU:
@@ -303,7 +303,7 @@ def DecodingBothDeformableConv2DLayerRes(input,
     else:
         conv = Activation('relu')(conv)
     conv = DeformableConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
-                  kernel_initializer='he_normal')(conv)
+                  kernel_initializer='he_normal', num_deformable_group = 1)(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     # add shortcut
@@ -529,7 +529,7 @@ def EncodingFirstDeformableConv2DLayer(input,
                   leakyReLU_alpha=0.3):
     # Double convolution according to U-Net structure
     conv = DeformableConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=stride, padding='same',
-                  kernel_initializer='he_normal')(input)
+                  kernel_initializer='he_normal', num_deformable_group = 1)(input)
     # Batch-normalization on demand
     if batch_norm == True:
         conv = BatchNormalization()(conv)
@@ -566,7 +566,7 @@ def EncodingBothDeformableConv2DLayer(input,
                   leakyReLU_alpha=0.3):
     # Double convolution according to U-Net structure
     conv = DeformableConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=stride, padding='same',
-                  kernel_initializer='he_normal')(input)
+                  kernel_initializer='he_normal', num_deformable_group = 1)(input)
     # Batch-normalization on demand
     if batch_norm == True:
         conv = BatchNormalization()(conv)
@@ -575,7 +575,7 @@ def EncodingBothDeformableConv2DLayer(input,
     else:
         conv = Activation('relu')(conv)
     conv = DeformableConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
-                  kernel_initializer='he_normal')(conv)
+                  kernel_initializer='he_normal', num_deformable_group = 1)(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     if useLeakyReLU:
@@ -810,7 +810,7 @@ def EncodingFirstDeformableConv2DLayerResAddOp(input,
                           leakyReLU_alpha=0.3):
     # Double convolution according to U-Net structure
     conv = DeformableConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=stride, padding='same',
-                  kernel_initializer='he_normal')(input)
+                  kernel_initializer='he_normal', num_deformable_group = 1)(input)
 
     # calculate how many times
     downscale = stride
@@ -858,7 +858,7 @@ def EncodingBothDeformableConv2DLayerResAddOp(input,
                           leakyReLU_alpha=0.3):
     # Double convolution according to U-Net structure
     conv = DeformableConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=stride, padding='same',
-                  kernel_initializer='he_normal')(input)
+                  kernel_initializer='he_normal', num_deformable_group = 1)(input)
 
     # calculate how many times
     downscale = stride
@@ -874,7 +874,7 @@ def EncodingBothDeformableConv2DLayerResAddOp(input,
     else:
         conv = Activation('relu')(conv)
     conv = DeformableConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
-                  kernel_initializer='he_normal')(conv)
+                  kernel_initializer='he_normal', num_deformable_group = 1)(conv)
     if batch_norm == True:
         conv = BatchNormalization()(conv)
 
