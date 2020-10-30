@@ -23,11 +23,46 @@ def train():
     # number_of_epoch. How many epoch you want to train?
     number_of_epoch = 1
     # Define model
-    model = UNet4_First5x5_FirstDeformable(number_of_kernels=8,
+    model_def = UNet4_First5x5_BothDeformable(number_of_kernels=8,
                                     input_size = (320,320,1),
                                     loss_function = Loss.CROSSENTROPY50DICE50,
                                     learning_rate=1e-3,
                                     useLeakyReLU=True)
+
+    model = UNet4_First5x5(number_of_kernels=8,
+                                           input_size=(320, 320, 1),
+                                           loss_function=Loss.CROSSENTROPY50DICE50,
+                                           learning_rate=1e-3,
+                                           useLeakyReLU=True)
+
+    for layer in zip(model.layers, model_def.layers):
+        first_weights = layer[0].get_weights()
+        second_weights = layer[1].get_weights()
+        # check types: first should be conv2d, second - deformable conv2d
+        name_1 = layer[0].__class__.__name__
+        name_2 = layer[1].__class__.__name__
+        if name_1 == 'Conv2D' and name_2 == 'DeformableConv2D':
+            # extract kernels from first weights and put it to second
+            first_shape = first_weights[0].shape
+            # iterate thought second and third axis of first shape
+            for ind_2 in range(0, first_shape[2]):
+                for ind_3 in range(0, first_shape[3]):
+                    first_weight_kernel = first_weights[0][:,:,ind_2,ind_3]
+                    # place in deformable convolution2d weights
+                    index_in_deformable_conv2d = ind_2 * first_shape[3] + ind_3
+                    print(index_in_deformable_conv2d)
+                    # adjust weights in deformed convolution
+                    second_weights[0][:,:,index_in_deformable_conv2d,0] = first_weight_kernel
+                    print('\n First:')
+                    print(first_weight_kernel)
+                    print('\n Second:')
+                    print(second_weights[0][:,:,index_in_deformable_conv2d,0])
+                    layer[1].set_weights(second_weights)
+        if name_1 == 'BatchNormalization' and name_2 == 'BatchNormalization':
+            layer[1].set_weights(layer[0].get_weights())
+        if name_1 == 'Conv2D' and name_2 == 'Conv2D':
+            layer[1].set_weights(layer[0].get_weights())
+
 
     # Where is your data?
     # This path should point to directory with folders 'Images' and 'Labels'
