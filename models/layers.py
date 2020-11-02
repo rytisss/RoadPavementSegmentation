@@ -38,6 +38,46 @@ def DecodingLayer(input,
     output = conv
     return output
 
+def DecodingLayerGroupConv(input,
+                  skippedInput,
+                  upSampleSize=2,
+                  kernels=8,
+                  kernel_size=3,
+                  batch_norm=True,
+                  useLeakyReLU=False,
+                  leakyReLU_alpha = 0.3):
+    conv = Conv2D(kernels, kernel_size=(2, 2), padding='same', kernel_initializer='he_normal')(
+        UpSampling2D((upSampleSize, upSampleSize))(input))
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    concatenatedInput = concatenate([conv, skippedInput], axis=3)
+    conv = GroupConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal',group='C4')(concatenatedInput)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    conv = GroupConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal',group='C4')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+
+    # pool along 4 filter (90 degree rotated)
+    output = MaxPool3D(pool_size=(1, 1, conv.shape[-2]))(conv)
+    output = output[:, :, :, 0, :]
+
+    return output
+
 def DecodingFirstDeformableConv2DLayer(input,
                   skippedInput,
                   upSampleSize=2,
@@ -599,6 +639,46 @@ def EncodingLayer(input,
     else:
         oppositeConnection = conv
         output = conv
+    # in next step this output needs to be activated
+    return oppositeConnection, output
+
+def EncodingLayerGroupConv(input,
+                  kernels=8,
+                  kernel_size=3,
+                  stride=1,
+                  max_pool=True,
+                  max_pool_size=2,
+                  batch_norm=True,
+                  useLeakyReLU=False,
+                  leakyReLU_alpha=0.3):
+    # Double convolution according to U-Net structure
+    conv = GroupConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=stride, padding='same',
+                  kernel_initializer='he_normal',group='C4')(input)
+    # Batch-normalization on demand
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    conv = GroupConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal',group='C4')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    # Max-pool on demand
+    if max_pool == True:
+        oppositeConnection = MaxPool3D(pool_size=(1, 1, conv.shape[-2]))(conv)
+        oppositeConnection = oppositeConnection[:,:,:,0,:]
+        output = MaxPool3D(pool_size=(max_pool_size, max_pool_size, conv.shape[-2]))(conv)
+        output = output[:,:,:,0,:]
+    else:
+        oppositeConnection = MaxPool3D(pool_size=(1, 1, conv.shape[-2]))(conv)
+        oppositeConnection = oppositeConnection[:, :, :, 0, :]
+        output = oppositeConnection
     # in next step this output needs to be activated
     return oppositeConnection, output
 

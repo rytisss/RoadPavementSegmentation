@@ -38,6 +38,54 @@ def scheduler(epoch):
     print('Epoch: ' + str(epoch) + ', learning rate = ' + str(lr))
     return lr
 
+def load_model_with_weights():
+    model = UNet4_First5x5(number_of_kernels=16,
+                           input_size=(320, 320, 1),
+                           loss_function=Loss.CROSSENTROPY50DICE50,
+                           learning_rate=1e-3,
+                           useLeakyReLU=True,
+                           pretrained_weights=r'C:\Users\Rytis\Desktop\freda holes data 2020-10-14\UNet4_leaky/UNet4_5x5_16k_320x320-010-0.0532.hdf5')
+    # Define model with deformable conv2d and load kernels from trained model
+    model_groupConv = UNet4_First5x5_GroupConv(number_of_kernels=16,
+                                                     input_size=(320, 320, 1),
+                                                     loss_function=Loss.CROSSENTROPY50DICE50,
+                                                     learning_rate=1e-3,
+                                                     useLeakyReLU=True)
+    latest_group_conv2D_layer_index = 0
+    for first_model_index in range(0, len(model.layers)):
+        # check types: first should be conv2d, second - deformable conv2d
+        name_1 = model.layers[first_model_index].__class__.__name__
+        if name_1 == 'Conv2D' or name_1 == 'BatchNormalization' or name_1 == 'Conv2D':
+            for second_model_index in range(latest_group_conv2D_layer_index, len(model_groupConv.layers)):
+                name_2 = model_groupConv.layers[second_model_index].__class__.__name__
+                if name_1 == 'Conv2D': #search for the GroupConv2D layer
+                    if name_2 == 'GroupConv2D':
+                        first_weights = model.layers[first_model_index].get_weights()
+                        second_weights = model_groupConv.layers[second_model_index].get_weights()
+                        latest_group_conv2D_layer_index = second_model_index
+                        break
+                    else:
+                        continue
+                if name_1 == 'BatchNormalization':
+                    if name_2 == 'BatchNormalization':
+                        first_weights = model.layers[first_model_index].get_weights()
+                        second_weights = model_groupConv.layers[second_model_index].get_weights()
+                        model_groupConv.layers[second_model_index].set_weights(first_weights)
+                        latest_group_conv2D_layer_index = second_model_index
+                        break
+                    else:
+                        continue
+                if name_1 == 'Conv2D':
+                    if name_2 == 'Conv2D':
+                        first_weights = model.layers[first_model_index].get_weights()
+                        second_weights = model_groupConv.layers[second_model_index].get_weights()
+                        model_groupConv.layers[second_model_index].set_weights(first_weights)
+                        latest_group_conv2D_layer_index = second_model_index
+                        break
+                    else:
+                        continue
+    return model_groupConv
+
 def train():
     number_of_samples = 209632
     # batch size. How many samples you want to feed in one iteration?
@@ -48,11 +96,9 @@ def train():
     # number_of_epoch. How many epoch you want to train?
     number_of_epoch = 12
     # Define model
-    model = UNet4_First5x5(number_of_kernels=16,
-                                    input_size = (320,320,1),
-                                    loss_function = Loss.CROSSENTROPY50DICE50,
-                                    learning_rate=1e-3,
-                                    useLeakyReLU=True)
+    model = load_model_with_weights()
+
+
 
     # Where is your data?
     # This path should point to directory with folders 'Images' and 'Labels'
