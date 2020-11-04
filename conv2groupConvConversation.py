@@ -24,10 +24,10 @@ def transferConvToGroupConv(model, model_groupConv):
                         else:
                             for i in range(0, first_weights[0].shape[3]):
                                 for j in range(0, first_weights[0].shape[2]):
-                                    feature_kernel = first_weights[0][:,:,0,0]
+                                    feature_kernel = first_weights[0][:,:,j,i]
                                     number_of_rotations = 4
                                     for rotation_index in range(0, number_of_rotations):
-                                        index_in_second_weights = j * 4 + rotation_index
+                                        index_in_second_weights = rotation_index * first_weights[0].shape[2] + rotation_index
                                         second_weights[0][:,:,index_in_second_weights,i] = np.rot90(feature_kernel,k=rotation_index)
                                         #print(index_in_second_weights)
                                         #print(feature_kernel)
@@ -48,7 +48,6 @@ def transferConvToGroupConv(model, model_groupConv):
                         break
                     else:
                         continue
-    return model_groupConv
 
 
 

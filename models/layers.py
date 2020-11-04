@@ -63,6 +63,7 @@ def DecodingLayerGroupConv(input,
         conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
     else:
         conv = Activation('relu')(conv)
+
     conv = GroupConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal',group='C4')(conv)
     if batch_norm == True:
@@ -654,6 +655,8 @@ def EncodingLayerGroupConv(input,
     # Double convolution according to U-Net structure
     conv = GroupConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=stride, padding='same',
                   kernel_initializer='he_normal',group='C4')(input)
+    #conv = MaxPool3D(pool_size=(1, 1, conv.shape[-2]))(conv)
+    #conv = conv[:, :, :, 0, :]
     # Batch-normalization on demand
     if batch_norm == True:
         conv = BatchNormalization()(conv)
