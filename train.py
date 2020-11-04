@@ -6,6 +6,7 @@ tf.config.experimental.set_memory_growth(physical_devices[0], True)
 from models.autoencoder import *
 from models.losses import Loss
 from models.utilities import trainGenerator
+from conv2groupConvConversation import transferConvToGroupConv
 import os
 
 
@@ -51,39 +52,7 @@ def load_model_with_weights():
                                                      loss_function=Loss.CROSSENTROPY50DICE50,
                                                      learning_rate=1e-3,
                                                      useLeakyReLU=True)
-    latest_group_conv2D_layer_index = 0
-    for first_model_index in range(0, len(model.layers)):
-        # check types: first should be conv2d, second - deformable conv2d
-        name_1 = model.layers[first_model_index].__class__.__name__
-        if name_1 == 'Conv2D' or name_1 == 'BatchNormalization' or name_1 == 'Conv2D':
-            for second_model_index in range(latest_group_conv2D_layer_index, len(model_groupConv.layers)):
-                name_2 = model_groupConv.layers[second_model_index].__class__.__name__
-                if name_1 == 'Conv2D': #search for the GroupConv2D layer
-                    if name_2 == 'GroupConv2D':
-                        first_weights = model.layers[first_model_index].get_weights()
-                        second_weights = model_groupConv.layers[second_model_index].get_weights()
-                        latest_group_conv2D_layer_index = second_model_index
-                        break
-                    else:
-                        continue
-                if name_1 == 'BatchNormalization':
-                    if name_2 == 'BatchNormalization':
-                        first_weights = model.layers[first_model_index].get_weights()
-                        second_weights = model_groupConv.layers[second_model_index].get_weights()
-                        model_groupConv.layers[second_model_index].set_weights(first_weights)
-                        latest_group_conv2D_layer_index = second_model_index
-                        break
-                    else:
-                        continue
-                if name_1 == 'Conv2D':
-                    if name_2 == 'Conv2D':
-                        first_weights = model.layers[first_model_index].get_weights()
-                        second_weights = model_groupConv.layers[second_model_index].get_weights()
-                        model_groupConv.layers[second_model_index].set_weights(first_weights)
-                        latest_group_conv2D_layer_index = second_model_index
-                        break
-                    else:
-                        continue
+    transferConvToGroupConv(model, model_groupConv)
     return model_groupConv
 
 def train():
