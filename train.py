@@ -6,7 +6,7 @@ tf.config.experimental.set_memory_growth(physical_devices[0], True)
 from models.autoencoder import *
 from models.losses import Loss
 from models.utilities import trainGenerator
-from conv2groupConvConversation import transferConvToGroupConv
+from conv2groupConvConversation import *
 import os
 
 
@@ -45,20 +45,20 @@ def load_model_with_weights():
                            loss_function=Loss.CROSSENTROPY50DICE50,
                            learning_rate=1e-3,
                            useLeakyReLU=True,
-                           pretrained_weights=r'C:\Users\Rytis\Desktop\freda holes data 2020-10-14\UNet4_leaky/UNet4_5x5_16k_320x320-010-0.0532.hdf5')
+                           pretrained_weights=r'E:\drilledHolesDetection\UNet4_leaky/UNet4_5x5_16k_320x320-010-0.0532.hdf5')
     # Define model with deformable conv2d and load kernels from trained model
-    model_groupConv = UNet4_First5x5_GroupConv(number_of_kernels=16,
+    model_deform = UNet4_First5x5_FirstDeformable(number_of_kernels=16,
                                                      input_size=(320, 320, 1),
                                                      loss_function=Loss.CROSSENTROPY50DICE50,
                                                      learning_rate=1e-3,
                                                      useLeakyReLU=True)
-    transferConvToGroupConv(model, model_groupConv)
-    return model_groupConv
+    transferConvToDeformedConv(model, model_deform)
+    return model_deform
 
 def train():
     number_of_samples = 209632
     # batch size. How many samples you want to feed in one iteration?
-    batch_size = 8
+    batch_size = 1
     tf.keras.backend.clear_session()
     # how many iterations in one epoch? Should cover whole dataset. Divide number of data samples from batch size
     number_of_iteration = number_of_samples / batch_size
@@ -66,8 +66,6 @@ def train():
     number_of_epoch = 12
     # Define model
     model = load_model_with_weights()
-
-
 
     # Where is your data?
     # This path should point to directory with folders 'Images' and 'Labels'
