@@ -3,6 +3,8 @@ import tensorflow as tf
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
+tf.config.run_functions_eagerly(True)
+
 from models.autoencoder import *
 from models.losses import Loss
 from models.utilities import trainGenerator
@@ -15,8 +17,8 @@ import os
 ###############################
 
 # Directory for weight saving (creates if it does not exist)
-weights_output_dir = r'E:\drilledHolesDetection//UNet4_leaky//'
-weights_output_name = 'UNet4_5x5_16k_320x320'
+weights_output_dir = r'E:\drilledHolesDetection//UNet4_leaky_octaveConv//'
+weights_output_name = 'UNet4_5x5_16k_320x320_octaveConv'
 
 class CustomSaver(tf.keras.callbacks.Callback):
     def __init__(self):
@@ -42,7 +44,7 @@ def scheduler(epoch):
 def train():
     number_of_samples = 209632
     # batch size. How many samples you want to feed in one iteration?
-    batch_size = 1
+    batch_size = 8
     tf.keras.backend.clear_session()
     # how many iterations in one epoch? Should cover whole dataset. Divide number of data samples from batch size
     number_of_iteration = number_of_samples / batch_size
@@ -54,7 +56,7 @@ def train():
                                         loss_function=Loss.CROSSENTROPY50DICE50,
                                         learning_rate=1e-3,
                                         alpha = 0.25)
-    tf.keras.utils.plot_model(model, to_file='image.png', show_shapes=True)
+    #tf.keras.utils.plot_model(model, to_file='image.png', show_shapes=True)
     # Where is your data?
     # This path should point to directory with folders 'Images' and 'Labels'
     # In each of mentioned folders should be image and annotations respectively

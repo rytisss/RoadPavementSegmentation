@@ -14,7 +14,8 @@ https://arxiv.org/abs/1904.05049
 from tensorflow.keras import layers
 from tensorflow.keras.models import Model
 import tensorflow.keras.backend as K
-from keras.utils import conv_utils
+from tensorflow.python.keras.utils import conv_utils
+
 
 class OctConv2D(layers.Layer):
     def __init__(self, filters, alpha, kernel_size=(3,3), strides=(1,1), 
