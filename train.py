@@ -39,22 +39,6 @@ def scheduler(epoch):
     print('Epoch: ' + str(epoch) + ', learning rate = ' + str(lr))
     return lr
 
-def load_model_with_weights():
-    model = UNet4_First5x5(number_of_kernels=16,
-                           input_size=(320, 320, 1),
-                           loss_function=Loss.CROSSENTROPY50DICE50,
-                           learning_rate=1e-3,
-                           useLeakyReLU=True,
-                           pretrained_weights=r'E:\drilledHolesDetection\UNet4_leaky/UNet4_5x5_16k_320x320-010-0.0532.hdf5')
-    # Define model with deformable conv2d and load kernels from trained model
-    model_deform = UNet4_First5x5_FirstDeformable(number_of_kernels=16,
-                                                     input_size=(320, 320, 1),
-                                                     loss_function=Loss.CROSSENTROPY50DICE50,
-                                                     learning_rate=1e-3,
-                                                     useLeakyReLU=True)
-    transferConvToDeformedConv(model, model_deform)
-    return model_deform
-
 def train():
     number_of_samples = 209632
     # batch size. How many samples you want to feed in one iteration?
@@ -65,8 +49,12 @@ def train():
     # number_of_epoch. How many epoch you want to train?
     number_of_epoch = 12
     # Define model
-    model = load_model_with_weights()
-
+    model = UNet4_First5x5_OctaveConv2D(number_of_kernels=16,
+                                        input_size=(320, 320, 1),
+                                        loss_function=Loss.CROSSENTROPY50DICE50,
+                                        learning_rate=1e-3,
+                                        alpha = 0.25)
+    tf.keras.utils.plot_model(model, to_file='image.png', show_shapes=True)
     # Where is your data?
     # This path should point to directory with folders 'Images' and 'Labels'
     # In each of mentioned folders should be image and annotations respectively

@@ -403,6 +403,100 @@ def UNet4_Coordconv_First5x5_BothDeformable(pretrained_weights=None,
     #plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
+def UNet4_First5x5_OctaveConv2D(pretrained_weights=None,
+                                input_size=(320, 320, 1),
+                                kernel_size=3,
+                                number_of_kernels=32,
+                                stride=1,
+                                max_pool=True,
+                                max_pool_size=2,
+                                batch_norm=True,
+                                alpha = 0.5,
+                                loss_function=Loss.CROSSENTROPY,
+                                learning_rate = 1e-3):
+    # Input
+    inputs = Input(input_size)
+    input_high = inputs
+    input_low = AvgPool2D((2,2))(inputs)
+    opposite_connection_high_0, opposite_connection_low_0, high_0, low_0 = EncodingOctaveConv2D(input_high,
+                                                                                                input_low,
+                                                                                                number_of_kernels,
+                                                                                                kernel_size=5,
+                                                                                                max_pool=True,
+                                                                                                max_pool_size=2,
+                                                                                                batch_norm=True,
+                                                                                                alpha=alpha)
+    opposite_connection_high_1, opposite_connection_low_1, high_1, low_1 = EncodingOctaveConv2D(high_0,
+                                                                                                low_0,
+                                                                                                number_of_kernels * 2,
+                                                                                                kernel_size=3,
+                                                                                                max_pool=True,
+                                                                                                max_pool_size=2,
+                                                                                                batch_norm=True,
+                                                                                                alpha=alpha)
+    opposite_connection_high_2, opposite_connection_low_2, high_2, low_2 = EncodingOctaveConv2D(high_1,
+                                                                                                low_1,
+                                                                                                number_of_kernels * 4,
+                                                                                                kernel_size=3,
+                                                                                                max_pool=True,
+                                                                                                max_pool_size=2,
+                                                                                                batch_norm=True,
+                                                                                                alpha=alpha)
+    _, _, high_3, low_3 = EncodingOctaveConv2D(high_2,
+                                                low_2,
+                                                number_of_kernels * 8,
+                                                kernel_size=3,
+                                                max_pool=False,
+                                                max_pool_size=2,
+                                                batch_norm=True,
+                                                alpha=alpha)
+
+    dec_high_2, dec_low_2 = DecodingOctaveConv2D(high_3,
+                                                 low_3,
+                                                 opposite_connection_high_2,
+                                                 opposite_connection_low_2,
+                                                 number_of_kernels * 4,
+                                                 kernel_size=3,
+                                                 batch_norm=True,
+                                                 alpha=alpha)
+    dec_high_1, dec_low_1 = DecodingOctaveConv2D(dec_high_2,
+                                                 dec_low_2,
+                                                 opposite_connection_high_1,
+                                                 opposite_connection_low_1,
+                                                 number_of_kernels * 2,
+                                                 kernel_size=3,
+                                                 batch_norm=True,
+                                                 alpha=alpha)
+    dec_high_0, dec_low_0 = DecodingOctaveConv2D(dec_high_1,
+                                                 dec_low_1,
+                                                 opposite_connection_high_0,
+                                                 opposite_connection_low_0,
+                                                 number_of_kernels,
+                                                 kernel_size=3,
+                                                 batch_norm=True,
+                                                 alpha=alpha)
+
+    channels = int(inputs.shape[-1])
+    h2h = Conv2D(channels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same')(dec_high_0) # to make number of filter1 1
+    l2h = Conv2DTranspose(channels, kernel_size=(kernel_size, kernel_size), strides=(2, 2), padding='same')(dec_low_0) # to upscale and make number of filters 1
+    x = Add()([h2h, l2h])
+
+    x = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
+        x)
+    if batch_norm:
+        x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+
+    outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(x)
+    model = Model(inputs, outputs)
+    # Compile with selected loss function
+    model = CompileModel(model, loss_function, learning_rate)
+    # Load trained weights if they are passed here
+    if pretrained_weights:
+        model.load_weights(pretrained_weights)
+    # plot_model(model, to_file='UNet4_res.png', show_shapes=True, show_layer_names=True)
+    return model
+
 def UNet4_res(pretrained_weights=None,
                                 input_size=(320, 320, 1),
                                 kernel_size=3,

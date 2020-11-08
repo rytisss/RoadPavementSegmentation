@@ -5,6 +5,7 @@ import preprocessing.crop_to_tiles
 import cv2
 import tensorflow as tf
 import os
+from conv2groupConvConversation import transferConvToGroupConv
 
 def gather_image_from_dir(input_dir):
     image_extensions = ['*.bmp', '*.jpg', '*.png']
@@ -19,6 +20,23 @@ def get_file_name(path):
     file_name, file_extension = os.path.splitext(file_name_with_ext)
     return file_name
 
+
+def load_model_with_weights():
+    model = UNet4_First5x5(number_of_kernels=16,
+                           input_size=(320, 320, 1),
+                           loss_function=Loss.CROSSENTROPY50DICE50,
+                           learning_rate=1e-3,
+                           useLeakyReLU=True,
+                           pretrained_weights=r'C:\Users\Rytis\Desktop\freda holes data 2020-10-14\UNet4_leaky/UNet4_5x5_16k_320x320-010-0.0532.hdf5')
+    # Define model with deformable conv2d and load kernels from trained model
+    model_groupConv = UNet4_First5x5_GroupConv(number_of_kernels=16,
+                                                     input_size=(320, 320, 1),
+                                                     loss_function=Loss.CROSSENTROPY50DICE50,
+                                                     learning_rate=1e-3,
+                                                     useLeakyReLU=True)
+    transferConvToGroupConv(model, model_groupConv)
+    return model_groupConv
+
 def predict_by_patches():
     # Tile/patch/region size
     input_size = (320, 320)
@@ -27,17 +45,16 @@ def predict_by_patches():
     path_to_weights = r'D:\drilled holes data for training\UNet4_res_assp_5x5_16k_320x320_leaky//'
 
     # Output path
-    output_path = r'D:\drilled holes data for training\UNet4_res_assp_5x5_16k_320x320_leaky//'
+    output_path = r'C:\Users\Rytis\Desktop\freda holes data 2020-10-14\test//'
 
     weights = glob.glob(path_to_weights + '*.hdf5')
-    for weight in weights:
-
+    #for weight in weights:
+    for i in range(0, 1):
         # Choose your 'super-model'
-        model = UNet4_res_aspp_First5x5(pretrained_weights=weight, number_of_kernels=16, input_size=(320, 320, 1),
-                                  loss_function=Loss.CROSSENTROPY50DICE50, useLeakyReLU=True)
+        model = load_model_with_weights()
 
         # Test images directory
-        test_images = r'D:\test\Data_with_gamma_correction/Image/'
+        test_images = r'C:\Users\Rytis\Desktop\freda holes data 2020-10-14\test\Data_with_gamma_correction\Image/'
 
         image_paths = gather_image_from_dir(test_images)
 
@@ -57,8 +74,8 @@ def predict_by_patches():
             prediction = np.zeros_like(image)
 
             #get image name
-            weight_name = get_file_name(weight)
-
+            #weight_name = get_file_name(weight)
+            weight_name = 'groupcoordtest'
             for roi in rois:
                 # Get tile/patch/region
                 image_crop = preprocessing.crop_to_tiles.cropImageFromRegion(image, roi)
@@ -76,7 +93,7 @@ def predict_by_patches():
                 prediction[roi[1]:roi[3], roi[0]:roi[2]] = cv2.bitwise_or(prediction[roi[1]:roi[3], roi[0]:roi[2]],
                                                                             prediction_crop)
                 # Do you want to visualize image?
-                show_image = False
+                show_image = True
                 if show_image:
                     cv2.imshow("image", image_crop)
                     cv2.imshow("prediction", prediction_crop)

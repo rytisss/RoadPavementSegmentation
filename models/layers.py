@@ -1,5 +1,6 @@
 from tensorflow.keras.layers import *
 from .customLayers import *
+from .oct_conv2d import *
 
 def DecodingLayer(input,
                   skippedInput,
@@ -57,6 +58,8 @@ def DecodingLayerGroupConv(input,
     concatenatedInput = concatenate([conv, skippedInput], axis=3)
     conv = GroupConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
                   kernel_initializer='he_normal',group='C4')(concatenatedInput)
+    conv = MaxPool3D(pool_size=(1, 1, conv.shape[-2]))(conv)
+    conv = conv[:, :, :, 0, :]
     if batch_norm == True:
         conv = BatchNormalization()(conv)
     if useLeakyReLU:
@@ -605,6 +608,57 @@ def DecodingLayerConcRes(input,
     output = conv
     return output
 
+def DecodingOctaveConv2D(input_high,
+                         input_low,
+                         opposite_high,
+                         opposite_low,
+                         kernels=8,
+                         kernel_size=3,
+                         stride=1,
+                         batch_norm=True,
+                         alpha=0.5,
+                         use_leaky_relu=True,
+                         leaky_relu_alpha=0.1):
+    high, low = OctConv2DTranspose(kernels, alpha, (2, 2),
+                                     strides=(2, 2), padding='same')([input_high, input_low])
+    if batch_norm:
+        high = BatchNormalization()(high)
+        low = BatchNormalization()(low)
+
+    if use_leaky_relu:
+        high = LeakyReLU(alpha=leaky_relu_alpha)(high)
+        low = LeakyReLU(alpha=leaky_relu_alpha)(low)
+    else:
+        high = Activation('relu')(high)
+        low = Activation('relu')(low)
+
+    high = concatenate([opposite_high, high])
+    low = concatenate([opposite_low, low])
+    high, low = OctConv2D(kernels, alpha, (kernel_size, kernel_size), padding='same')([high, low])
+    if batch_norm:
+        high = BatchNormalization()(high)
+        low = BatchNormalization()(low)
+
+    if use_leaky_relu:
+        high = LeakyReLU(alpha=leaky_relu_alpha)(high)
+        low = LeakyReLU(alpha=leaky_relu_alpha)(low)
+    else:
+        high = Activation('relu')(high)
+        low = Activation('relu')(low)
+
+    high, low = OctConv2D(kernels, alpha, (kernel_size, kernel_size), padding='same')([high, low])
+    if batch_norm:
+        high = BatchNormalization()(high)
+        low = BatchNormalization()(low)
+
+    if use_leaky_relu:
+        high = LeakyReLU(alpha=leaky_relu_alpha)(high)
+        low = LeakyReLU(alpha=leaky_relu_alpha)(low)
+    else:
+        high = Activation('relu')(high)
+        low = Activation('relu')(low)
+
+    return high, low
 
 def EncodingLayer(input,
                   kernels=8,
@@ -655,8 +709,8 @@ def EncodingLayerGroupConv(input,
     # Double convolution according to U-Net structure
     conv = GroupConv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=stride, padding='same',
                   kernel_initializer='he_normal',group='C4')(input)
-    #conv = MaxPool3D(pool_size=(1, 1, conv.shape[-2]))(conv)
-    #conv = conv[:, :, :, 0, :]
+    conv = MaxPool3D(pool_size=(1, 1, conv.shape[-2]))(conv)
+    conv = conv[:, :, :, 0, :]
     # Batch-normalization on demand
     if batch_norm == True:
         conv = BatchNormalization()(conv)
@@ -839,6 +893,48 @@ def EncodingCoordConvLayerBothDeformable(input,
     # in next step this output needs to be activated
     return oppositeConnection, output
 
+def EncodingOctaveConv2D(input_high,
+                         input_low,
+                         kernels=8,
+                         kernel_size=3,
+                         stride=1,
+                         max_pool = True,
+                         max_pool_size=2,
+                         batch_norm=True,
+                         alpha=0.5,
+                         use_leaky_relu=True,
+                         leaky_relu_alpha=0.1):
+    high, low = OctConv2D(kernels, alpha, (kernel_size, kernel_size), padding='same')([input_high, input_low])
+    if batch_norm:
+        high = BatchNormalization()(high)
+        low = BatchNormalization()(low)
+
+    if use_leaky_relu:
+        high = LeakyReLU(alpha=leaky_relu_alpha)(high)
+        low = LeakyReLU(alpha=leaky_relu_alpha)(low)
+    else:
+        high = Activation('relu')(high)
+        low = Activation('relu')(low)
+
+    high, low = OctConv2D(kernels, alpha, (kernel_size, kernel_size), padding='same')([high, low])
+    if batch_norm:
+        high = BatchNormalization()(high)
+        low = BatchNormalization()(low)
+
+    if use_leaky_relu:
+        high = LeakyReLU(alpha=leaky_relu_alpha)(high)
+        low = LeakyReLU(alpha=leaky_relu_alpha)(low)
+    else:
+        high = Activation('relu')(high)
+        low = Activation('relu')(low)
+
+    opposite_connection_high = high
+    opposite_connection_low = low
+    if max_pool:
+        high = MaxPooling2D(pool_size=(max_pool_size, max_pool_size))(high)
+        low = MaxPooling2D(pool_size=(max_pool_size, max_pool_size))(low)
+
+    return opposite_connection_high, opposite_connection_low, high, low
 
 def EncodingLayerTripple(input,
                          kernels=8,

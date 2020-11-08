@@ -27,7 +27,8 @@ def transferConvToGroupConv(model, model_groupConv):
                                     feature_kernel = first_weights[0][:,:,j,i]
                                     number_of_rotations = 4
                                     for rotation_index in range(0, number_of_rotations):
-                                        index_in_second_weights = rotation_index * first_weights[0].shape[2] + rotation_index
+                                        index_in_second_weights = j * rotation_index + rotation_index
+                                        # index_in_second_weights = rotation_index * first_weights[0].shape[2] + rotation_index
                                         second_weights[0][:,:,index_in_second_weights,i] = np.rot90(feature_kernel,k=rotation_index)
                                         #print(index_in_second_weights)
                                         #print(feature_kernel)
