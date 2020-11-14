@@ -17,8 +17,8 @@ import os
 ###############################
 
 # Directory for weight saving (creates if it does not exist)
-weights_output_dir = r'E:\drilledHolesDetection//UNet4_leaky_octaveConv//'
-weights_output_name = 'UNet4_5x5_16k_320x320_octaveConv'
+weights_output_dir = r'C:\Users\Rytis\Desktop\freda holes data 2020-10-14\UNet4_leaky_SE'
+weights_output_name = 'UNet4_5x5_SE_16k_320x320'
 
 class CustomSaver(tf.keras.callbacks.Callback):
     def __init__(self):
@@ -51,16 +51,16 @@ def train():
     # number_of_epoch. How many epoch you want to train?
     number_of_epoch = 12
     # Define model
-    model = UNet4_First5x5_OctaveConv2D(number_of_kernels=16,
+    model = UNet4_First5x5_SE(number_of_kernels=16,
                                         input_size=(320, 320, 1),
                                         loss_function=Loss.CROSSENTROPY50DICE50,
                                         learning_rate=1e-3,
-                                        alpha = 0.25)
-    #tf.keras.utils.plot_model(model, to_file='image.png', show_shapes=True)
+                                        useLeakyReLU=True)
+    tf.keras.utils.plot_model(model, to_file='image.png', show_shapes=True)
     # Where is your data?
     # This path should point to directory with folders 'Images' and 'Labels'
     # In each of mentioned folders should be image and annotations respectively
-    data_dir = r'C:\Users\AR\Desktop\freda holes data 2020-10-14/'
+    data_dir = r'C:\Users\Rytis\Desktop\freda holes data 2020-10-14\dataForTraining/'
 
     # Possible 'on-the-flight' augmentation parameters
     data_gen_args = dict(rotation_range=0.0,

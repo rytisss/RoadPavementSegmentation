@@ -2,6 +2,18 @@ from tensorflow.keras.layers import *
 from .customLayers import *
 from .oct_conv2d import *
 
+def Squeeze_Excitation(input):
+    # calculate channels
+    channel_count = int(np.shape(input)[-1])
+    squeeze = GlobalAveragePooling2D()(input)
+    excitation = Dense(channel_count)(squeeze)
+    excitation = Activation('relu')(excitation)
+    excitation = Dense(channel_count)(excitation)
+    excitation = Activation('sigmoid')(excitation)
+    excitation = tf.reshape(excitation, [-1, 1, 1, channel_count])
+    scale = input * excitation
+    return scale
+
 def DecodingLayer(input,
                   skippedInput,
                   upSampleSize=2,
@@ -36,6 +48,43 @@ def DecodingLayer(input,
     else:
         conv = Activation('relu')(conv)
 
+    output = conv
+    return output
+
+def DecodingLayerSE(input,
+                  skippedInput,
+                  upSampleSize=2,
+                  kernels=8,
+                  kernel_size=3,
+                  batch_norm=True,
+                  useLeakyReLU=False,
+                  leakyReLU_alpha = 0.3):
+    conv = Conv2D(kernels, kernel_size=(2, 2), padding='same', kernel_initializer='he_normal')(
+        UpSampling2D((upSampleSize, upSampleSize))(input))
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    concatenatedInput = concatenate([conv, skippedInput], axis=3)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(concatenatedInput)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    conv = Squeeze_Excitation(conv)
     output = conv
     return output
 
@@ -687,6 +736,44 @@ def EncodingLayer(input,
         conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
     else:
         conv = Activation('relu')(conv)
+    # Max-pool on demand
+    if max_pool == True:
+        oppositeConnection = conv
+        output = MaxPooling2D(pool_size=(max_pool_size, max_pool_size))(conv)
+    else:
+        oppositeConnection = conv
+        output = conv
+    # in next step this output needs to be activated
+    return oppositeConnection, output
+
+def EncodingLayerSE(input,
+                  kernels=8,
+                  kernel_size=3,
+                  stride=1,
+                  max_pool=True,
+                  max_pool_size=2,
+                  batch_norm=True,
+                  useLeakyReLU=False,
+                  leakyReLU_alpha=0.3):
+    # Double convolution according to U-Net structure
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=stride, padding='same',
+                  kernel_initializer='he_normal')(input)
+    # Batch-normalization on demand
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    conv = Squeeze_Excitation(conv)
     # Max-pool on demand
     if max_pool == True:
         oppositeConnection = conv
