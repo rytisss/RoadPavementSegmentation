@@ -245,6 +245,45 @@ def DecodingLayerCoordConv(input,
     output = conv
     return output
 
+def DecodingLayerCoordConvSE(input,
+                  skippedInput,
+                  upSampleSize=2,
+                  kernels=8,
+                  kernel_size=3,
+                  batch_norm=True,
+                  useLeakyReLU=False,
+                  leakyReLU_alpha = 0.3):
+    conv = AddCoords2D()(input)
+    conv = Conv2D(kernels, kernel_size=(2, 2), padding='same', kernel_initializer='he_normal')(
+        UpSampling2D((upSampleSize, upSampleSize))(conv))
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    concatenatedInput = concatenate([conv, skippedInput], axis=3)
+    conv = AddCoords2D()(concatenatedInput)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    conv = AddCoords2D()(conv)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    output = Squeeze_Excitation(conv)
+    return output
+
 def DecodingLayerCoordConvBothDeformable(input,
                   skippedInput,
                   upSampleSize=2,
@@ -1018,6 +1057,47 @@ def EncodingCoordConvLayer(input,
         conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
     else:
         conv = Activation('relu')(conv)
+    # Max-pool on demand
+    if max_pool == True:
+        oppositeConnection = conv
+        output = MaxPooling2D(pool_size=(max_pool_size, max_pool_size))(conv)
+    else:
+        oppositeConnection = conv
+        output = conv
+    # in next step this output needs to be activated
+    return oppositeConnection, output
+
+#CoordConv layers
+def EncodingCoordConvLayerSE(input,
+                  kernels=8,
+                  kernel_size=3,
+                  stride=1,
+                  max_pool=True,
+                  max_pool_size=2,
+                  batch_norm=True,
+                  useLeakyReLU=False,
+                  leakyReLU_alpha=0.3):
+    # Double convolution according to U-Net structure
+    conv = AddCoords2D()(input)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=stride, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    # Batch-normalization on demand
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    conv = AddCoords2D()(conv)
+    conv = Conv2D(kernels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    if batch_norm == True:
+        conv = BatchNormalization()(conv)
+    if useLeakyReLU:
+        conv = LeakyReLU(alpha=leakyReLU_alpha)(conv)
+    else:
+        conv = Activation('relu')(conv)
+    conv = Squeeze_Excitation(conv)
     # Max-pool on demand
     if max_pool == True:
         oppositeConnection = conv
