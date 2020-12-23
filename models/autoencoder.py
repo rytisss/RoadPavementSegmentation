@@ -1,11 +1,13 @@
-from tensorflow.keras.models import *
-from tensorflow.keras.optimizers import *
-from tensorflow.keras.layers import *
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.layers import LeakyReLU, Activation
+import tensorflow as tf
+import math
 
 from .losses import *
 from .layers import *
 
-def CompileModel(model, lossFunction, learning_rate = 1e-3):
+
+def CompileModel(model, lossFunction, learning_rate=1e-3):
     if lossFunction == Loss.DICE:
         model.compile(optimizer=Adam(lr=learning_rate), loss=dice_loss, metrics=[dice_score])
     elif lossFunction == Loss.CROSSENTROPY:
@@ -29,23 +31,223 @@ def CompileModel(model, lossFunction, learning_rate = 1e-3):
     elif lossFunction == Loss.CROSSENTROPY75DICE25:
         model.compile(optimizer=Adam(lr=learning_rate), loss=cross_and_dice_loss(0.75, 0.25), metrics=[dice_score])
     elif lossFunction == Loss.WEIGHTEDCROSSENTROPY50DICE50:
-        model.compile(optimizer=Adam(lr=learning_rate), loss=weighted_cross_and_dice_loss(0.5, 0.5), metrics=[dice_score])
+        model.compile(optimizer=Adam(lr=learning_rate), loss=weighted_cross_and_dice_loss(0.5, 0.5),
+                      metrics=[dice_score])
     elif lossFunction == Loss.WEIGHTEDCROSSENTROPY25DICE75:
-        model.compile(optimizer=Adam(lr=learning_rate), loss=weighted_cross_and_dice_loss(0.25, 0.75), metrics=[dice_score])
+        model.compile(optimizer=Adam(lr=learning_rate), loss=weighted_cross_and_dice_loss(0.25, 0.75),
+                      metrics=[dice_score])
     elif lossFunction == Loss.WEIGHTEDCROSSENTROPY75DICE25:
-        model.compile(optimizer=Adam(lr=learning_rate), loss=weighted_cross_and_dice_loss(0.75, 0.25), metrics=[dice_score])
+        model.compile(optimizer=Adam(lr=learning_rate), loss=weighted_cross_and_dice_loss(0.75, 0.25),
+                      metrics=[dice_score])
     return model
 
+
+def squeeze_and_excitation(input_tensor):
+    # calculate channels
+    channel_count = int(np.shape(input_tensor)[-1])
+    squeeze = GlobalAveragePooling2D()(input_tensor)
+    excitation = Dense(channel_count, use_bias=False, kernel_initializer='he_normal')(squeeze)
+    excitation = Activation('relu')(excitation)
+    excitation = Dense(channel_count, use_bias=False, kernel_initializer='he_normal')(excitation)
+    excitation = Activation('sigmoid')(excitation)
+    excitation = tf.reshape(excitation, [-1, 1, 1, channel_count])
+    scale = input_tensor * excitation
+    return scale
+
+
+def aspp(input_tensor,
+         kernels=8,
+         kernel_size=3,
+         leaky_relu_alpha=0.1):
+    # dilate = 1
+    dilate1 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=1, kernel_initializer='he_normal')(
+        input_tensor)
+    dilate1 = BatchNormalization()(dilate1)
+    dilate1 = LeakyReLU(alpha=leaky_relu_alpha)(dilate1) if leaky_relu_alpha > 0.0 else Activation('relu')(dilate1)
+
+    # dilate = 2
+    dilate2 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=2, kernel_initializer='he_normal')(
+        input_tensor)
+    dilate2 = BatchNormalization()(dilate2)
+    dilate2 = LeakyReLU(alpha=leaky_relu_alpha)(dilate2) if leaky_relu_alpha > 0.0 else Activation('relu')(dilate2)
+
+    # dilate = 3
+    dilate3 = Conv2D(kernels, kernel_size, padding='same', dilation_rate=4, kernel_initializer='he_normal')(
+        input_tensor)
+    dilate3 = BatchNormalization()(dilate3)
+    dilate3 = LeakyReLU(alpha=leaky_relu_alpha)(dilate3) if leaky_relu_alpha > 0.0 else Activation('relu')(dilate3)
+
+    height, width, n_ch = input_tensor.shape.as_list()[1:]
+    pool = AveragePooling2D(pool_size=(height, width))(input)
+    pool = UpSampling2D((height, width), interpolation='bilinear')(pool)
+
+    output = concatenate([dilate1, dilate2, dilate3, pool])
+
+    # perform parameters reduction with 1x1
+    output = Conv2D(kernels, kernel_size=(1, 1), strides=1, padding='same',
+                    kernel_initializer='he_normal')(output)
+    output = BatchNormalization()(output)
+    output = LeakyReLU(alpha=leaky_relu_alpha)(output) if leaky_relu_alpha > 0.0 else Activation('relu')(output)
+
+    return output
+
+
+def make_downscale_layer(input_tensor,
+                         number_of_filters,
+                         filter_size,
+                         max_pool=True,
+                         use_residual_connections=False,
+                         use_aspp=False,
+                         use_se=False,
+                         use_coord_conv=False,
+                         leaky_relu_alpha=0.1):
+    if use_residual_connections:
+        shortcut = Conv2D(number_of_filters, kernel_size=(1, 1), strides=1, padding='same',
+                          kernel_initializer='he_normal')(input_tensor)
+    # 1 conv
+    conv = AddCoords2D()(input_tensor) if use_coord_conv else input_tensor
+    conv = Conv2D(number_of_filters, kernel_size=(filter_size, filter_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    conv = BatchNormalization()(conv)
+    conv = LeakyReLU(alpha=leaky_relu_alpha)(conv) if leaky_relu_alpha > 0.0 else Activation('relu')(conv)
+    # 2 conv
+    conv = AddCoords2D()(conv) if use_coord_conv else conv
+    conv = Conv2D(number_of_filters, kernel_size=(filter_size, filter_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    conv = BatchNormalization()(conv)
+    if use_se:
+        conv = squeeze_and_excitation(conv)
+    # add shortcut (optional)
+    if use_residual_connections:
+        conv = Add()([conv, shortcut])
+    # activate
+    conv = LeakyReLU(alpha=leaky_relu_alpha)(conv) if leaky_relu_alpha > 0.0 else Activation('relu')(conv)
+    # atrous spatial pyramid pool
+    if use_aspp:
+        conv = aspp(conv, number_of_filters, filter_size, leaky_relu_alpha)
+    opposite_connection = conv
+    output = MaxPooling2D(pool_size=(2, 2))(conv) if max_pool else conv
+    return opposite_connection, output
+
+
+def make_upscale_layer(input_tensor,
+                       skipped_connection,
+                       number_of_filters,
+                       filter_size,
+                       use_residual_connections=False,
+                       use_se=False,
+                       use_coord_conv=False,
+                       leaky_relu_alpha=0.1):
+    conv = AddCoords2D()(input_tensor) if use_coord_conv else input_tensor
+    conv = Conv2DTranspose(number_of_filters, (filter_size, filter_size), strides=(2, 2), padding="same",
+                           kernel_initializer='he_normal')(conv)
+    conv = BatchNormalization()(conv)
+    conv = LeakyReLU(alpha=leaky_relu_alpha)(conv) if leaky_relu_alpha > 0.0 else Activation('relu')(conv)
+    conv = concatenate([conv, skipped_connection])
+    # residual optional
+    if use_residual_connections:
+        shortcut = Conv2D(number_of_filters, kernel_size=(1, 1), strides=1, padding='same',
+                          kernel_initializer='he_normal')(conv)
+    # 1 conv
+    conv = AddCoords2D()(input_tensor) if use_coord_conv else conv
+    conv = Conv2D(number_of_filters, kernel_size=(filter_size, filter_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    conv = BatchNormalization()(conv)
+    conv = LeakyReLU(alpha=leaky_relu_alpha)(conv) if leaky_relu_alpha > 0.0 else Activation('relu')(conv)
+    # 2 conv
+    conv = AddCoords2D()(conv) if use_coord_conv else conv
+    conv = Conv2D(number_of_filters, kernel_size=(filter_size, filter_size), strides=1, padding='same',
+                  kernel_initializer='he_normal')(conv)
+    conv = BatchNormalization()(conv)
+    if use_se:
+        conv = squeeze_and_excitation(conv)
+    # add shortcut (optional)
+    if use_residual_connections:
+        conv = Add()([conv, shortcut])
+    # activate
+    conv = LeakyReLU(alpha=leaky_relu_alpha)(conv) if leaky_relu_alpha > 0.0 else Activation('relu')(conv)
+    return conv
+
+
+def unet_autoencoder(pretrained_weights=None,
+                     input_size=(320, 320, 1),
+                     filters_in_input=8,
+                     downscale_times=4,
+                     use_residual_connections=False,
+                     use_aspp=False,
+                     use_se=False,
+                     use_coord_conv=False,
+                     leaky_relu_alpha=0.1,
+                     filter_size_in_first_layer=5):
+    down_layers = []
+    # sanity check, must be at least 2 downscales
+    if downscale_times < 2:
+        raise ValueError('Should be at least 2 downscales!')
+    inputs = Input(input_size)
+    # first layer always simple, without residual connections
+    opposite_connection_0, enc_0 = make_downscale_layer(inputs, filters_in_input, filter_size_in_first_layer,
+                                                        use_residual_connections=False, use_aspp=False, use_se=use_se,
+                                                        use_coord_conv=False, leaky_relu_alpha=leaky_relu_alpha)
+    down_layers.append((opposite_connection_0, enc_0))
+    # calculate how many layers until bottleneck (without input and bottleneck)
+    layers_until_bottleneck = downscale_times - 2
+    for i in range(layers_until_bottleneck):
+        opposite_connection, enc = make_downscale_layer(down_layers[i][1], int(filters_in_input * math.pow(2, (i + 1))),
+                                                        3,
+                                                        use_residual_connections=use_residual_connections,
+                                                        use_aspp=False, use_se=use_se,
+                                                        use_coord_conv=use_coord_conv,
+                                                        leaky_relu_alpha=leaky_relu_alpha)
+        down_layers.append((opposite_connection, enc))
+    # bottleneck
+    _, enc_bridge = make_downscale_layer(down_layers[layers_until_bottleneck][1],
+                                         filters_in_input * downscale_times * 2, 3,
+                                         max_pool=False,
+                                         use_residual_connections=use_residual_connections,
+                                         use_aspp=use_aspp, use_se=use_se,
+                                         use_coord_conv=use_coord_conv,
+                                         leaky_relu_alpha=leaky_relu_alpha)
+    # down_layers.append((opposite_connection_bridge, enc_bridge))
+    # reverse for iterations
+    down_layers.reverse()
+    # how many layers until output (without bottleneck and last layer)
+    layers_until_output = layers_until_bottleneck
+    latest_dec_input_tensor = enc_bridge
+    for i in range(layers_until_output):
+        latest_dec_input_tensor = make_upscale_layer(latest_dec_input_tensor, down_layers[i][0],
+                                                     int(filters_in_input * math.pow(2, downscale_times - i - 1)),
+                                                     filter_size=3,
+                                                     use_residual_connections=use_residual_connections,
+                                                     use_se=use_se, use_coord_conv=use_coord_conv,
+                                                     leaky_relu_alpha=leaky_relu_alpha)
+    # make last layer
+    last_up_layer = make_upscale_layer(latest_dec_input_tensor, down_layers[downscale_times - 2][0], filters_in_input,
+                                       filter_size=3,
+                                       use_residual_connections=False, use_se=use_se, use_coord_conv=use_coord_conv,
+                                       leaky_relu_alpha=leaky_relu_alpha)
+    output = Conv2D(2, kernel_size=(3, 3), strides=1, padding='same', kernel_initializer='he_normal')(
+        last_up_layer)
+    output = BatchNormalization()(output)
+    output = LeakyReLU(alpha=leaky_relu_alpha)(output) if leaky_relu_alpha > 0.0 else Activation('relu')(output)
+
+    outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(output)
+    model = Model(inputs, outputs)
+    if pretrained_weights:
+        model.load_weights(pretrained_weights)
+        # plot_model(model, to_file='UNet4.png', show_shapes=True, show_layer_names=True)
+    return model
+
+
 def UNet4(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                 learning_rate = 1e-3):
+          input_size=(320, 320, 1),
+          kernel_size=3,
+          number_of_kernels=32,
+          stride=1,
+          max_pool=True,
+          max_pool_size=2,
+          batch_norm=True,
+          loss_function=Loss.CROSSENTROPY,
+          learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -76,19 +278,20 @@ def UNet4(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet5_First5x5(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                 learning_rate = 1e-3):
+                   input_size=(320, 320, 1),
+                   kernel_size=3,
+                   number_of_kernels=32,
+                   stride=1,
+                   max_pool=True,
+                   max_pool_size=2,
+                   batch_norm=True,
+                   loss_function=Loss.CROSSENTROPY,
+                   learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -122,21 +325,22 @@ def UNet5_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet4_First5x5(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                useLeakyReLU=True,
-                LeakyReLU_alpha=0.1,
-                 learning_rate = 1e-3):
+                   input_size=(320, 320, 1),
+                   kernel_size=3,
+                   number_of_kernels=32,
+                   stride=1,
+                   max_pool=True,
+                   max_pool_size=2,
+                   batch_norm=True,
+                   loss_function=Loss.CROSSENTROPY,
+                   useLeakyReLU=True,
+                   LeakyReLU_alpha=0.1,
+                   learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -147,12 +351,15 @@ def UNet4_First5x5(pretrained_weights=None,
     oppositeEnc2, enc2 = EncodingLayer(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size,
                                        batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     _, enc3 = EncodingLayer(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                            batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingLayer(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec1 = DecodingLayer(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec0 = DecodingLayer(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec2 = DecodingLayer(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm,
+                         useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec1 = DecodingLayer(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm,
+                         useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = DecodingLayer(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU,
+                         leakyReLU_alpha=LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -168,37 +375,41 @@ def UNet4_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet4_First5x5_SE(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                useLeakyReLU=True,
-                LeakyReLU_alpha=0.1,
-                 learning_rate = 1e-3):
+                      input_size=(320, 320, 1),
+                      kernel_size=3,
+                      number_of_kernels=32,
+                      stride=1,
+                      max_pool=True,
+                      max_pool_size=2,
+                      batch_norm=True,
+                      loss_function=Loss.CROSSENTROPY,
+                      useLeakyReLU=True,
+                      LeakyReLU_alpha=0.1,
+                      learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
     oppositeEnc0, enc0 = EncodingLayerSE(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                         batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     oppositeEnc1, enc1 = EncodingLayerSE(enc0, number_of_kernels * 2, kernel_size, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                         batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     oppositeEnc2, enc2 = EncodingLayerSE(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                         batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     _, enc3 = EncodingLayerSE(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                              batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingLayerSE(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec1 = DecodingLayerSE(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec0 = DecodingLayerSE(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec2 = DecodingLayerSE(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm,
+                           useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec1 = DecodingLayerSE(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm,
+                           useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = DecodingLayerSE(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU,
+                           leakyReLU_alpha=LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -214,37 +425,43 @@ def UNet4_First5x5_SE(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet4_First5x5_GroupConv(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                useLeakyReLU=True,
-                LeakyReLU_alpha=0.1,
-                 learning_rate = 1e-3):
+                             input_size=(320, 320, 1),
+                             kernel_size=3,
+                             number_of_kernels=32,
+                             stride=1,
+                             max_pool=True,
+                             max_pool_size=2,
+                             batch_norm=True,
+                             loss_function=Loss.CROSSENTROPY,
+                             useLeakyReLU=True,
+                             LeakyReLU_alpha=0.1,
+                             learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
     oppositeEnc0, enc0 = EncodingLayerGroupConv(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc1, enc1 = EncodingLayerGroupConv(enc0, number_of_kernels * 2, kernel_size, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc2, enc2 = EncodingLayerGroupConv(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                                batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc1, enc1 = EncodingLayerGroupConv(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
+                                                max_pool_size,
+                                                batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc2, enc2 = EncodingLayerGroupConv(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
+                                                max_pool_size,
+                                                batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     _, enc3 = EncodingLayerGroupConv(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                     batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingLayerGroupConv(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec1 = DecodingLayerGroupConv(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec0 = DecodingLayerGroupConv(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec2 = DecodingLayerGroupConv(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm,
+                                  useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec1 = DecodingLayerGroupConv(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm,
+                                  useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = DecodingLayerGroupConv(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm,
+                                  useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -260,38 +477,48 @@ def UNet4_First5x5_GroupConv(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
+
 
 # First convolutional operation each downscale/upscale is deformed
 def UNet4_First5x5_FirstDeformable(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                useLeakyReLU=True,
-                LeakyReLU_alpha=0.1,
-                 learning_rate = 1e-3):
+                                   input_size=(320, 320, 1),
+                                   kernel_size=3,
+                                   number_of_kernels=32,
+                                   stride=1,
+                                   max_pool=True,
+                                   max_pool_size=2,
+                                   batch_norm=True,
+                                   loss_function=Loss.CROSSENTROPY,
+                                   useLeakyReLU=True,
+                                   LeakyReLU_alpha=0.1,
+                                   learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
-    oppositeEnc0, enc0 = EncodingFirstDeformableConv2DLayer(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc1, enc1 = EncodingFirstDeformableConv2DLayer(enc0, number_of_kernels * 2, kernel_size, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc2, enc2 = EncodingFirstDeformableConv2DLayer(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc0, enc0 = EncodingFirstDeformableConv2DLayer(inputs, number_of_kernels, 5, stride, max_pool,
+                                                            max_pool_size,
+                                                            batch_norm, useLeakyReLU=useLeakyReLU,
+                                                            leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc1, enc1 = EncodingFirstDeformableConv2DLayer(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
+                                                            max_pool_size,
+                                                            batch_norm, useLeakyReLU=useLeakyReLU,
+                                                            leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc2, enc2 = EncodingFirstDeformableConv2DLayer(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
+                                                            max_pool_size,
+                                                            batch_norm, useLeakyReLU=useLeakyReLU,
+                                                            leakyReLU_alpha=LeakyReLU_alpha)
     _, enc3 = EncodingFirstDeformableConv2DLayer(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                                 batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingFirstDeformableConv2DLayer(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec1 = DecodingFirstDeformableConv2DLayer(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec0 = DecodingFirstDeformableConv2DLayer(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec2 = DecodingFirstDeformableConv2DLayer(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm,
+                                              useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec1 = DecodingFirstDeformableConv2DLayer(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm,
+                                              useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = DecodingFirstDeformableConv2DLayer(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm,
+                                              useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -307,38 +534,48 @@ def UNet4_First5x5_FirstDeformable(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
+
 
 # Both convolutional operation each downscale/upscale layers are deformed
 def UNet4_First5x5_BothDeformable(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                useLeakyReLU=True,
-                LeakyReLU_alpha=0.1,
-                 learning_rate = 1e-3):
+                                  input_size=(320, 320, 1),
+                                  kernel_size=3,
+                                  number_of_kernels=32,
+                                  stride=1,
+                                  max_pool=True,
+                                  max_pool_size=2,
+                                  batch_norm=True,
+                                  loss_function=Loss.CROSSENTROPY,
+                                  useLeakyReLU=True,
+                                  LeakyReLU_alpha=0.1,
+                                  learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
-    oppositeEnc0, enc0 = EncodingBothDeformableConv2DLayer(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc1, enc1 = EncodingBothDeformableConv2DLayer(enc0, number_of_kernels * 2, kernel_size, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc2, enc2 = EncodingBothDeformableConv2DLayer(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc0, enc0 = EncodingBothDeformableConv2DLayer(inputs, number_of_kernels, 5, stride, max_pool,
+                                                           max_pool_size,
+                                                           batch_norm, useLeakyReLU=useLeakyReLU,
+                                                           leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc1, enc1 = EncodingBothDeformableConv2DLayer(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
+                                                           max_pool_size,
+                                                           batch_norm, useLeakyReLU=useLeakyReLU,
+                                                           leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc2, enc2 = EncodingBothDeformableConv2DLayer(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
+                                                           max_pool_size,
+                                                           batch_norm, useLeakyReLU=useLeakyReLU,
+                                                           leakyReLU_alpha=LeakyReLU_alpha)
     _, enc3 = EncodingBothDeformableConv2DLayer(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                                batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingBothDeformableConv2DLayer(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec1 = DecodingBothDeformableConv2DLayer(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec0 = DecodingBothDeformableConv2DLayer(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec2 = DecodingBothDeformableConv2DLayer(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm,
+                                             useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec1 = DecodingBothDeformableConv2DLayer(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm,
+                                             useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = DecodingBothDeformableConv2DLayer(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm,
+                                             useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -354,37 +591,43 @@ def UNet4_First5x5_BothDeformable(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet4_Coordconv_First5x5(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                useLeakyReLU=True,
-                LeakyReLU_alpha=0.1,
-                 learning_rate = 1e-3):
+                             input_size=(320, 320, 1),
+                             kernel_size=3,
+                             number_of_kernels=32,
+                             stride=1,
+                             max_pool=True,
+                             max_pool_size=2,
+                             batch_norm=True,
+                             loss_function=Loss.CROSSENTROPY,
+                             useLeakyReLU=True,
+                             LeakyReLU_alpha=0.1,
+                             learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
     oppositeEnc0, enc0 = EncodingCoordConvLayer(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc1, enc1 = EncodingCoordConvLayer(enc0, number_of_kernels * 2, kernel_size, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc2, enc2 = EncodingCoordConvLayer(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                                batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc1, enc1 = EncodingCoordConvLayer(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
+                                                max_pool_size,
+                                                batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc2, enc2 = EncodingCoordConvLayer(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
+                                                max_pool_size,
+                                                batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     _, enc3 = EncodingCoordConvLayer(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                     batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingLayerCoordConv(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec1 = DecodingLayerCoordConv(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec0 = DecodingLayerCoordConv(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec2 = DecodingLayerCoordConv(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm,
+                                  useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec1 = DecodingLayerCoordConv(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm,
+                                  useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = DecodingLayerCoordConv(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm,
+                                  useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -400,37 +643,46 @@ def UNet4_Coordconv_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet4_Coordconv_First5x5_SE(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                useLeakyReLU=True,
-                LeakyReLU_alpha=0.1,
-                 learning_rate = 1e-3):
+                                input_size=(320, 320, 1),
+                                kernel_size=3,
+                                number_of_kernels=32,
+                                stride=1,
+                                max_pool=True,
+                                max_pool_size=2,
+                                batch_norm=True,
+                                loss_function=Loss.CROSSENTROPY,
+                                useLeakyReLU=True,
+                                LeakyReLU_alpha=0.1,
+                                learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
     oppositeEnc0, enc0 = EncodingCoordConvLayerSE(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc1, enc1 = EncodingCoordConvLayerSE(enc0, number_of_kernels * 2, kernel_size, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc2, enc2 = EncodingCoordConvLayerSE(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                                  batch_norm, useLeakyReLU=useLeakyReLU,
+                                                  leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc1, enc1 = EncodingCoordConvLayerSE(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
+                                                  max_pool_size,
+                                                  batch_norm, useLeakyReLU=useLeakyReLU,
+                                                  leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc2, enc2 = EncodingCoordConvLayerSE(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
+                                                  max_pool_size,
+                                                  batch_norm, useLeakyReLU=useLeakyReLU,
+                                                  leakyReLU_alpha=LeakyReLU_alpha)
     _, enc3 = EncodingCoordConvLayerSE(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size,
                                        batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingLayerCoordConvSE(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec1 = DecodingLayerCoordConvSE(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec0 = DecodingLayerCoordConvSE(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec2 = DecodingLayerCoordConvSE(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm,
+                                    useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec1 = DecodingLayerCoordConvSE(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm,
+                                    useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = DecodingLayerCoordConvSE(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm,
+                                    useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -446,37 +698,49 @@ def UNet4_Coordconv_First5x5_SE(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet4_Coordconv_First5x5_BothDeformable(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                useLeakyReLU=True,
-                LeakyReLU_alpha=0.1,
-                 learning_rate = 1e-3):
+                                            input_size=(320, 320, 1),
+                                            kernel_size=3,
+                                            number_of_kernels=32,
+                                            stride=1,
+                                            max_pool=True,
+                                            max_pool_size=2,
+                                            batch_norm=True,
+                                            loss_function=Loss.CROSSENTROPY,
+                                            useLeakyReLU=True,
+                                            LeakyReLU_alpha=0.1,
+                                            learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
-    oppositeEnc0, enc0 = EncodingCoordConvLayerBothDeformable(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc1, enc1 = EncodingCoordConvLayerBothDeformable(enc0, number_of_kernels * 2, kernel_size, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc2, enc2 = EncodingCoordConvLayerBothDeformable(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    _, enc3 = EncodingCoordConvLayerBothDeformable(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size,
-                                       batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc0, enc0 = EncodingCoordConvLayerBothDeformable(inputs, number_of_kernels, 5, stride, max_pool,
+                                                              max_pool_size,
+                                                              batch_norm, useLeakyReLU=useLeakyReLU,
+                                                              leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc1, enc1 = EncodingCoordConvLayerBothDeformable(enc0, number_of_kernels * 2, kernel_size, stride,
+                                                              max_pool, max_pool_size,
+                                                              batch_norm, useLeakyReLU=useLeakyReLU,
+                                                              leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc2, enc2 = EncodingCoordConvLayerBothDeformable(enc1, number_of_kernels * 4, kernel_size, stride,
+                                                              max_pool, max_pool_size,
+                                                              batch_norm, useLeakyReLU=useLeakyReLU,
+                                                              leakyReLU_alpha=LeakyReLU_alpha)
+    _, enc3 = EncodingCoordConvLayerBothDeformable(enc2, number_of_kernels * 8, kernel_size, stride, False,
+                                                   max_pool_size,
+                                                   batch_norm, useLeakyReLU=useLeakyReLU,
+                                                   leakyReLU_alpha=LeakyReLU_alpha)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingLayerCoordConvBothDeformable(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec1 = DecodingLayerCoordConvBothDeformable(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec0 = DecodingLayerCoordConvBothDeformable(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec2 = DecodingLayerCoordConvBothDeformable(enc3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm,
+                                                useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec1 = DecodingLayerCoordConvBothDeformable(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm,
+                                                useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = DecodingLayerCoordConvBothDeformable(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm,
+                                                useLeakyReLU=useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -492,8 +756,9 @@ def UNet4_Coordconv_First5x5_BothDeformable(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet5_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
+
 
 def UNet4_First5x5_OctaveConv2D(pretrained_weights=None,
                                 input_size=(320, 320, 1),
@@ -503,13 +768,13 @@ def UNet4_First5x5_OctaveConv2D(pretrained_weights=None,
                                 max_pool=True,
                                 max_pool_size=2,
                                 batch_norm=True,
-                                alpha = 0.5,
+                                alpha=0.5,
                                 loss_function=Loss.CROSSENTROPY,
-                                learning_rate = 1e-3):
+                                learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     input_high = inputs
-    input_low = AvgPool2D((2,2))(inputs)
+    input_low = AvgPool2D((2, 2))(inputs)
     opposite_connection_high_0, opposite_connection_low_0, high_0, low_0 = EncodingOctaveConv2D(input_high,
                                                                                                 input_low,
                                                                                                 number_of_kernels,
@@ -535,13 +800,13 @@ def UNet4_First5x5_OctaveConv2D(pretrained_weights=None,
                                                                                                 batch_norm=True,
                                                                                                 alpha=alpha)
     _, _, high_3, low_3 = EncodingOctaveConv2D(high_2,
-                                                low_2,
-                                                number_of_kernels * 8,
-                                                kernel_size=3,
-                                                max_pool=False,
-                                                max_pool_size=2,
-                                                batch_norm=True,
-                                                alpha=alpha)
+                                               low_2,
+                                               number_of_kernels * 8,
+                                               kernel_size=3,
+                                               max_pool=False,
+                                               max_pool_size=2,
+                                               batch_norm=True,
+                                               alpha=alpha)
 
     dec_high_2, dec_low_2 = DecodingOctaveConv2D(high_3,
                                                  low_3,
@@ -569,8 +834,10 @@ def UNet4_First5x5_OctaveConv2D(pretrained_weights=None,
                                                  alpha=alpha)
 
     channels = int(inputs.shape[-1])
-    h2h = Conv2D(channels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same')(dec_high_0) # to make number of filter1 1
-    l2h = Conv2DTranspose(channels, kernel_size=(kernel_size, kernel_size), strides=(2, 2), padding='same')(dec_low_0) # to upscale and make number of filters 1
+    h2h = Conv2D(channels, kernel_size=(kernel_size, kernel_size), strides=1, padding='same')(
+        dec_high_0)  # to make number of filter1 1
+    l2h = Conv2DTranspose(channels, kernel_size=(kernel_size, kernel_size), strides=(2, 2), padding='same')(
+        dec_low_0)  # to upscale and make number of filters 1
     x = Add()([h2h, l2h])
 
     x = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
@@ -589,21 +856,22 @@ def UNet4_First5x5_OctaveConv2D(pretrained_weights=None,
     # plot_model(model, to_file='UNet4_res.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet4_res(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                                learning_rate = 1e-3):
+              input_size=(320, 320, 1),
+              kernel_size=3,
+              number_of_kernels=32,
+              stride=1,
+              max_pool=True,
+              max_pool_size=2,
+              batch_norm=True,
+              loss_function=Loss.CROSSENTROPY,
+              learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
     oppositeEnc0, enc0 = EncodingLayer(inputs, number_of_kernels, kernel_size, stride, max_pool, max_pool_size,
-                                               batch_norm)
+                                       batch_norm)
     oppositeEnc1, enc1 = EncodingLayerResAddOp(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
                                                max_pool_size, batch_norm)
     oppositeEnc2, enc2 = EncodingLayerResAddOp(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
@@ -630,19 +898,20 @@ def UNet4_res(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_res.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_res.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet4_assp(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                 learning_rate = 1e-3):
+               input_size=(320, 320, 1),
+               kernel_size=3,
+               number_of_kernels=32,
+               stride=1,
+               max_pool=True,
+               max_pool_size=2,
+               batch_norm=True,
+               loss_function=Loss.CROSSENTROPY,
+               learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -653,7 +922,7 @@ def UNet4_assp(pretrained_weights=None,
     oppositeEnc2, enc2 = EncodingLayer(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size,
                                        batch_norm)
     _, enc3 = EncodingLayer(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size,
-                                       batch_norm)
+                            batch_norm)
     assp = AtrousSpatialPyramidPool(enc3, number_of_kernels * 8, kernel_size)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
@@ -674,8 +943,9 @@ def UNet4_assp(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_assp.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_assp.png', show_shapes=True, show_layer_names=True)
     return model
+
 
 def UNet4_asspWF(pretrained_weights=None,
                  input_size=(320, 320, 1),
@@ -686,7 +956,7 @@ def UNet4_asspWF(pretrained_weights=None,
                  max_pool_size=2,
                  batch_norm=True,
                  loss_function=Loss.CROSSENTROPY,
-                 learning_rate = 1e-3):
+                 learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -697,7 +967,7 @@ def UNet4_asspWF(pretrained_weights=None,
     oppositeEnc2, enc2 = EncodingLayer(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size,
                                        batch_norm)
     _, enc3 = EncodingLayer(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size,
-                                       batch_norm)
+                            batch_norm)
     assp = AtrousSpatialPyramidWaterFallPool(enc3, number_of_kernels * 8, kernel_size)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
@@ -718,19 +988,20 @@ def UNet4_asspWF(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_asspWF.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_asspWF.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet4_assp_First5x5(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                 learning_rate = 1e-3):
+                        input_size=(320, 320, 1),
+                        kernel_size=3,
+                        number_of_kernels=32,
+                        stride=1,
+                        max_pool=True,
+                        max_pool_size=2,
+                        batch_norm=True,
+                        loss_function=Loss.CROSSENTROPY,
+                        learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -741,7 +1012,7 @@ def UNet4_assp_First5x5(pretrained_weights=None,
     oppositeEnc2, enc2 = EncodingLayer(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size,
                                        batch_norm)
     _, enc3 = EncodingLayer(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size,
-                                       batch_norm)
+                            batch_norm)
     assp = AtrousSpatialPyramidPool(enc3, number_of_kernels * 8, kernel_size)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
@@ -762,19 +1033,20 @@ def UNet4_assp_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_assp_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_assp_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet4_asspWF_First5x5(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                 learning_rate = 1e-3):
+                          input_size=(320, 320, 1),
+                          kernel_size=3,
+                          number_of_kernels=32,
+                          stride=1,
+                          max_pool=True,
+                          max_pool_size=2,
+                          batch_norm=True,
+                          loss_function=Loss.CROSSENTROPY,
+                          learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -785,7 +1057,7 @@ def UNet4_asspWF_First5x5(pretrained_weights=None,
     oppositeEnc2, enc2 = EncodingLayer(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size,
                                        batch_norm)
     _, enc3 = EncodingLayer(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size,
-                                       batch_norm)
+                            batch_norm)
     assp = AtrousSpatialPyramidWaterFallPool(enc3, number_of_kernels * 8, kernel_size)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
@@ -806,20 +1078,20 @@ def UNet4_asspWF_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_asspWF_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_asspWF_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
 
 def UNet4_assp_AG_First5x5(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                 learning_rate = 1e-3):
+                           input_size=(320, 320, 1),
+                           kernel_size=3,
+                           number_of_kernels=32,
+                           stride=1,
+                           max_pool=True,
+                           max_pool_size=2,
+                           batch_norm=True,
+                           loss_function=Loss.CROSSENTROPY,
+                           learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -830,7 +1102,7 @@ def UNet4_assp_AG_First5x5(pretrained_weights=None,
     oppositeEnc2, enc2 = EncodingLayer(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size,
                                        batch_norm)
     _, enc3 = EncodingLayer(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size,
-                                       batch_norm)
+                            batch_norm)
     assp = AtrousSpatialPyramidPool(enc3, number_of_kernels * 8, kernel_size)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
@@ -851,19 +1123,20 @@ def UNet4_assp_AG_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_assp_AG_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_assp_AG_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet4_asspWF_AG_First5x5(pretrained_weights=None,
-                 input_size=(320, 320, 1),
-                 kernel_size=3,
-                 number_of_kernels=32,
-                 stride=1,
-                 max_pool=True,
-                 max_pool_size=2,
-                 batch_norm=True,
-                 loss_function=Loss.CROSSENTROPY,
-                 learning_rate = 1e-3):
+                             input_size=(320, 320, 1),
+                             kernel_size=3,
+                             number_of_kernels=32,
+                             stride=1,
+                             max_pool=True,
+                             max_pool_size=2,
+                             batch_norm=True,
+                             loss_function=Loss.CROSSENTROPY,
+                             learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -874,7 +1147,7 @@ def UNet4_asspWF_AG_First5x5(pretrained_weights=None,
     oppositeEnc2, enc2 = EncodingLayer(enc1, number_of_kernels * 4, kernel_size, stride, max_pool, max_pool_size,
                                        batch_norm)
     _, enc3 = EncodingLayer(enc2, number_of_kernels * 8, kernel_size, stride, False, max_pool_size,
-                                       batch_norm)
+                            batch_norm)
     assp = AtrousSpatialPyramidWaterFallPool(enc3, number_of_kernels * 8, kernel_size)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
@@ -895,24 +1168,25 @@ def UNet4_asspWF_AG_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_asspWF_AG_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_asspWF_AG_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet5_res(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-              learning_rate = 1e-3):
+              input_size=(320, 320, 1),
+              kernel_size=3,
+              number_of_kernels=32,
+              stride=1,
+              max_pool=True,
+              max_pool_size=2,
+              batch_norm=True,
+              loss_function=Loss.CROSSENTROPY,
+              learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
     oppositeEnc0, enc0 = EncodingLayer(inputs, number_of_kernels, kernel_size, stride, max_pool, max_pool_size,
-                                               batch_norm)
+                                       batch_norm)
     oppositeEnc1, enc1 = EncodingLayerResAddOp(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
                                                max_pool_size, batch_norm)
     oppositeEnc2, enc2 = EncodingLayerResAddOp(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
@@ -921,8 +1195,8 @@ def UNet5_res(pretrained_weights=None,
                                                max_pool_size,
                                                batch_norm)
     _, enc4 = EncodingLayerResAddOp(enc3, number_of_kernels * 16, kernel_size, stride, False,
-                                               max_pool_size,
-                                               batch_norm)
+                                    max_pool_size,
+                                    batch_norm)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
     dec3 = DecodingLayerRes(enc4, oppositeEnc3, 2, number_of_kernels * 8, kernel_size, batch_norm)
@@ -943,24 +1217,25 @@ def UNet5_res(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet5_res.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet5_res.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet5_res_First5x5(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-              learning_rate = 1e-3):
+                       input_size=(320, 320, 1),
+                       kernel_size=3,
+                       number_of_kernels=32,
+                       stride=1,
+                       max_pool=True,
+                       max_pool_size=2,
+                       batch_norm=True,
+                       loss_function=Loss.CROSSENTROPY,
+                       learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
     oppositeEnc0, enc0 = EncodingLayer(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                               batch_norm)
+                                       batch_norm)
     oppositeEnc1, enc1 = EncodingLayerResAddOp(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
                                                max_pool_size, batch_norm)
     oppositeEnc2, enc2 = EncodingLayerResAddOp(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
@@ -969,8 +1244,8 @@ def UNet5_res_First5x5(pretrained_weights=None,
                                                max_pool_size,
                                                batch_norm)
     _, enc4 = EncodingLayerResAddOp(enc3, number_of_kernels * 16, kernel_size, stride, False,
-                                               max_pool_size,
-                                               batch_norm)
+                                    max_pool_size,
+                                    batch_norm)
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
     dec3 = DecodingLayerRes(enc4, oppositeEnc3, 2, number_of_kernels * 8, kernel_size, batch_norm)
@@ -991,25 +1266,25 @@ def UNet5_res_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet5_res_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet5_res_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
 
 def UNet4_res_dense_aspp(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                                learning_rate = 1e-3):
+                         input_size=(320, 320, 1),
+                         kernel_size=3,
+                         number_of_kernels=32,
+                         stride=1,
+                         max_pool=True,
+                         max_pool_size=2,
+                         batch_norm=True,
+                         loss_function=Loss.CROSSENTROPY,
+                         learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
     oppositeEnc0, enc0 = EncodingLayer(inputs, number_of_kernels, kernel_size, stride, max_pool, max_pool_size,
-                                               batch_norm)
+                                       batch_norm)
     oppositeEnc1, enc1 = EncodingLayerResAddOp(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
                                                max_pool_size, batch_norm)
     oppositeEnc2, enc2 = EncodingLayerResAddOp(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
@@ -1037,20 +1312,21 @@ def UNet4_res_dense_aspp(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_res_dense_aspp.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_res_dense_aspp.png', show_shapes=True, show_layer_names=True)
     return model
+
 
 ###############
 def UNet4_res_aspp(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                                learning_rate = 1e-3):
+                   input_size=(320, 320, 1),
+                   kernel_size=3,
+                   number_of_kernels=32,
+                   stride=1,
+                   max_pool=True,
+                   max_pool_size=2,
+                   batch_norm=True,
+                   loss_function=Loss.CROSSENTROPY,
+                   learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -1062,7 +1338,7 @@ def UNet4_res_aspp(pretrained_weights=None,
                                                max_pool_size, batch_norm)
 
     _, enc3 = EncodingLayerResAddOp(enc2, number_of_kernels * 8, kernel_size, stride, False,
-                                               max_pool_size, batch_norm)
+                                    max_pool_size, batch_norm)
     assp = AtrousSpatialPyramidPool(enc3, number_of_kernels * 8, kernel_size)
 
     # decoding
@@ -1084,22 +1360,23 @@ def UNet4_res_aspp(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
     return model
+
 
 ###############
 def UNet4_res_aspp_First5x5(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                                useLeakyReLU=True,
-                                LeakyReLU_alpha=0.1,
-                                learning_rate = 1e-3):
+                            input_size=(320, 320, 1),
+                            kernel_size=3,
+                            number_of_kernels=32,
+                            stride=1,
+                            max_pool=True,
+                            max_pool_size=2,
+                            batch_norm=True,
+                            loss_function=Loss.CROSSENTROPY,
+                            useLeakyReLU=True,
+                            LeakyReLU_alpha=0.1,
+                            learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -1111,14 +1388,18 @@ def UNet4_res_aspp_First5x5(pretrained_weights=None,
                                                max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
 
     _, enc3 = EncodingLayerResAddOp(enc2, number_of_kernels * 8, kernel_size, stride, False,
-                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    assp = AtrousSpatialPyramidPool(enc3, number_of_kernels * 8, kernel_size, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                    max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    assp = AtrousSpatialPyramidPool(enc3, number_of_kernels * 8, kernel_size, useLeakyReLU,
+                                    leakyReLU_alpha=LeakyReLU_alpha)
 
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingLayerRes(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec1 = DecodingLayerRes(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec0 = DecodingLayerRes(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec2 = DecodingLayerRes(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU,
+                            leakyReLU_alpha=LeakyReLU_alpha)
+    dec1 = DecodingLayerRes(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU,
+                            leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = DecodingLayerRes(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU,
+                            leakyReLU_alpha=LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -1133,41 +1414,47 @@ def UNet4_res_aspp_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
     return model
 
 
 def UNet4_res_aspp_First5x5_SE(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                                useLeakyReLU=True,
-                                LeakyReLU_alpha=0.1,
-                                learning_rate = 1e-3):
+                               input_size=(320, 320, 1),
+                               kernel_size=3,
+                               number_of_kernels=32,
+                               stride=1,
+                               max_pool=True,
+                               max_pool_size=2,
+                               batch_norm=True,
+                               loss_function=Loss.CROSSENTROPY,
+                               useLeakyReLU=True,
+                               LeakyReLU_alpha=0.1,
+                               learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
     oppositeEnc0, enc0 = EncodingLayerSE(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                         batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
     oppositeEnc1, enc1 = EncodingLayerResAddOpSE(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                                 max_pool_size, batch_norm, useLeakyReLU,
+                                                 leakyReLU_alpha=LeakyReLU_alpha)
     oppositeEnc2, enc2 = EncodingLayerResAddOpSE(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                                 max_pool_size, batch_norm, useLeakyReLU,
+                                                 leakyReLU_alpha=LeakyReLU_alpha)
 
     _, enc3 = EncodingLayerResAddOpSE(enc2, number_of_kernels * 8, kernel_size, stride, False,
-                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    assp = AtrousSpatialPyramidPoolSE(enc3, number_of_kernels * 8, kernel_size, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                      max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    assp = AtrousSpatialPyramidPoolSE(enc3, number_of_kernels * 8, kernel_size, useLeakyReLU,
+                                      leakyReLU_alpha=LeakyReLU_alpha)
 
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingLayerResSE(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec1 = DecodingLayerResSE(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec0 = DecodingLayerResSE(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec2 = DecodingLayerResSE(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU,
+                              leakyReLU_alpha=LeakyReLU_alpha)
+    dec1 = DecodingLayerResSE(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU,
+                              leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = DecodingLayerResSE(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU,
+                              leakyReLU_alpha=LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -1182,41 +1469,52 @@ def UNet4_res_aspp_First5x5_SE(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
     return model
+
 
 ###############
 def UNet4_res_aspp_First5x5_FirstDeformable(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                                useLeakyReLU=True,
-                                LeakyReLU_alpha=0.1,
-                                learning_rate = 1e-3):
+                                            input_size=(320, 320, 1),
+                                            kernel_size=3,
+                                            number_of_kernels=32,
+                                            stride=1,
+                                            max_pool=True,
+                                            max_pool_size=2,
+                                            batch_norm=True,
+                                            loss_function=Loss.CROSSENTROPY,
+                                            useLeakyReLU=True,
+                                            LeakyReLU_alpha=0.1,
+                                            learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
-    oppositeEnc0, enc0 = EncodingFirstDeformableConv2DLayer(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc1, enc1 = EncodingFirstDeformableConv2DLayerResAddOp(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc2, enc2 = EncodingFirstDeformableConv2DLayerResAddOp(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc0, enc0 = EncodingFirstDeformableConv2DLayer(inputs, number_of_kernels, 5, stride, max_pool,
+                                                            max_pool_size,
+                                                            batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc1, enc1 = EncodingFirstDeformableConv2DLayerResAddOp(enc0, number_of_kernels * 2, kernel_size, stride,
+                                                                    max_pool,
+                                                                    max_pool_size, batch_norm, useLeakyReLU,
+                                                                    leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc2, enc2 = EncodingFirstDeformableConv2DLayerResAddOp(enc1, number_of_kernels * 4, kernel_size, stride,
+                                                                    max_pool,
+                                                                    max_pool_size, batch_norm, useLeakyReLU,
+                                                                    leakyReLU_alpha=LeakyReLU_alpha)
 
     _, enc3 = EncodingFirstDeformableConv2DLayerResAddOp(enc2, number_of_kernels * 8, kernel_size, stride, False,
-                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    assp = AtrousSpatialPyramidPool(enc3, number_of_kernels * 8, kernel_size, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                                         max_pool_size, batch_norm, useLeakyReLU,
+                                                         leakyReLU_alpha=LeakyReLU_alpha)
+    assp = AtrousSpatialPyramidPool(enc3, number_of_kernels * 8, kernel_size, useLeakyReLU,
+                                    leakyReLU_alpha=LeakyReLU_alpha)
 
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingFirstDeformableConv2DLayerRes(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec1 = DecodingFirstDeformableConv2DLayerRes(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec0 = DecodingFirstDeformableConv2DLayerRes(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec2 = DecodingFirstDeformableConv2DLayerRes(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm,
+                                                 useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec1 = DecodingFirstDeformableConv2DLayerRes(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm,
+                                                 useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = DecodingFirstDeformableConv2DLayerRes(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm,
+                                                 useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -1231,41 +1529,52 @@ def UNet4_res_aspp_First5x5_FirstDeformable(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
     return model
+
 
 ###############
 def UNet4_res_aspp_First5x5_BothDeformable(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                                useLeakyReLU=True,
-                                LeakyReLU_alpha=0.1,
-                                learning_rate = 1e-3):
+                                           input_size=(320, 320, 1),
+                                           kernel_size=3,
+                                           number_of_kernels=32,
+                                           stride=1,
+                                           max_pool=True,
+                                           max_pool_size=2,
+                                           batch_norm=True,
+                                           loss_function=Loss.CROSSENTROPY,
+                                           useLeakyReLU=True,
+                                           LeakyReLU_alpha=0.1,
+                                           learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
-    oppositeEnc0, enc0 = EncodingBothDeformableConv2DLayer(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc1, enc1 = EncodingBothDeformableConv2DLayerResAddOp(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    oppositeEnc2, enc2 = EncodingBothDeformableConv2DLayerResAddOp(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc0, enc0 = EncodingBothDeformableConv2DLayer(inputs, number_of_kernels, 5, stride, max_pool,
+                                                           max_pool_size,
+                                                           batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc1, enc1 = EncodingBothDeformableConv2DLayerResAddOp(enc0, number_of_kernels * 2, kernel_size, stride,
+                                                                   max_pool,
+                                                                   max_pool_size, batch_norm, useLeakyReLU,
+                                                                   leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc2, enc2 = EncodingBothDeformableConv2DLayerResAddOp(enc1, number_of_kernels * 4, kernel_size, stride,
+                                                                   max_pool,
+                                                                   max_pool_size, batch_norm, useLeakyReLU,
+                                                                   leakyReLU_alpha=LeakyReLU_alpha)
 
     _, enc3 = EncodingBothDeformableConv2DLayerResAddOp(enc2, number_of_kernels * 8, kernel_size, stride, False,
-                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    assp = AtrousSpatialPyramidPool(enc3, number_of_kernels * 8, kernel_size, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+                                                        max_pool_size, batch_norm, useLeakyReLU,
+                                                        leakyReLU_alpha=LeakyReLU_alpha)
+    assp = AtrousSpatialPyramidPool(enc3, number_of_kernels * 8, kernel_size, useLeakyReLU,
+                                    leakyReLU_alpha=LeakyReLU_alpha)
 
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingBothDeformableConv2DLayerRes(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec1 = DecodingBothDeformableConv2DLayerRes(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
-    dec0 = DecodingBothDeformableConv2DLayerRes(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec2 = DecodingBothDeformableConv2DLayerRes(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm,
+                                                useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec1 = DecodingBothDeformableConv2DLayerRes(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm,
+                                                useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = DecodingBothDeformableConv2DLayerRes(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm,
+                                                useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -1280,41 +1589,45 @@ def UNet4_res_aspp_First5x5_BothDeformable(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
     return model
+
 
 ###############
 def UNet4_res_aspp_First5x5_CoordConv(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                                useLeakyReLU=True,
-                                LeakyReLU_alpha=0.1,
-                                learning_rate = 1e-3):
+                                      input_size=(320, 320, 1),
+                                      kernel_size=3,
+                                      number_of_kernels=32,
+                                      stride=1,
+                                      max_pool=True,
+                                      max_pool_size=2,
+                                      batch_norm=True,
+                                      loss_function=Loss.CROSSENTROPY,
+                                      useLeakyReLU=True,
+                                      LeakyReLU_alpha=0.1,
+                                      learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
     oppositeEnc0, enc0 = EncodingCoordConvLayer(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU, LeakyReLU_alpha)
+                                                batch_norm, useLeakyReLU, LeakyReLU_alpha)
     oppositeEnc1, enc1 = EncodingCoordConvLayerResAddOp(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
+                                                        max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
     oppositeEnc2, enc2 = EncodingCoordConvLayerResAddOp(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
+                                                        max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
 
     _, enc3 = EncodingCoordConvLayerResAddOp(enc2, number_of_kernels * 8, kernel_size, stride, False,
-                                               max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
+                                             max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
     assp = AtrousSpatialPyramidPoolCoordConv(enc3, number_of_kernels * 8, kernel_size, useLeakyReLU, LeakyReLU_alpha)
 
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingCoordConvLayerRes(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
-    dec1 = DecodingCoordConvLayerRes(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
-    dec0 = DecodingCoordConvLayerRes(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
+    dec2 = DecodingCoordConvLayerRes(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm,
+                                     useLeakyReLU, LeakyReLU_alpha)
+    dec1 = DecodingCoordConvLayerRes(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm,
+                                     useLeakyReLU, LeakyReLU_alpha)
+    dec0 = DecodingCoordConvLayerRes(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU,
+                                     LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -1330,31 +1643,32 @@ def UNet4_res_aspp_First5x5_CoordConv(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
     return model
+
 
 ###############
 def UNet4_res_aspp_First5x5_CoordConv_SE(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                                useLeakyReLU=True,
-                                LeakyReLU_alpha=0.1,
-                                learning_rate = 1e-3):
+                                         input_size=(320, 320, 1),
+                                         kernel_size=3,
+                                         number_of_kernels=32,
+                                         stride=1,
+                                         max_pool=True,
+                                         max_pool_size=2,
+                                         batch_norm=True,
+                                         loss_function=Loss.CROSSENTROPY,
+                                         useLeakyReLU=True,
+                                         LeakyReLU_alpha=0.1,
+                                         learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
     oppositeEnc0, enc0 = EncodingCoordConvLayerSE(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU, LeakyReLU_alpha)
+                                                  batch_norm, useLeakyReLU, LeakyReLU_alpha)
     oppositeEnc1, enc1 = EncodingCoordConvLayerResAddOpSE(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
+                                                          max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
     oppositeEnc2, enc2 = EncodingCoordConvLayerResAddOpSE(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
+                                                          max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
 
     _, enc3 = EncodingCoordConvLayerResAddOpSE(enc2, number_of_kernels * 8, kernel_size, stride, False,
                                                max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
@@ -1362,9 +1676,12 @@ def UNet4_res_aspp_First5x5_CoordConv_SE(pretrained_weights=None,
 
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingCoordConvLayerResSE(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
-    dec1 = DecodingCoordConvLayerResSE(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
-    dec0 = DecodingCoordConvLayerResSE(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
+    dec2 = DecodingCoordConvLayerResSE(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm,
+                                       useLeakyReLU, LeakyReLU_alpha)
+    dec1 = DecodingCoordConvLayerResSE(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm,
+                                       useLeakyReLU, LeakyReLU_alpha)
+    dec0 = DecodingCoordConvLayerResSE(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU,
+                                       LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -1380,41 +1697,49 @@ def UNet4_res_aspp_First5x5_CoordConv_SE(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
     return model
 
 
 def UNet4_res_aspp_First5x5_CoordConvBothDeformable(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                                useLeakyReLU=True,
-                                LeakyReLU_alpha=0.1,
-                                learning_rate = 1e-3):
+                                                    input_size=(320, 320, 1),
+                                                    kernel_size=3,
+                                                    number_of_kernels=32,
+                                                    stride=1,
+                                                    max_pool=True,
+                                                    max_pool_size=2,
+                                                    batch_norm=True,
+                                                    loss_function=Loss.CROSSENTROPY,
+                                                    useLeakyReLU=True,
+                                                    LeakyReLU_alpha=0.1,
+                                                    learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
-    oppositeEnc0, enc0 = EncodingCoordConvLayerBothDeformable(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
-                                       batch_norm, useLeakyReLU, LeakyReLU_alpha)
-    oppositeEnc1, enc1 = EncodingCoordConvLayerResAddOpBothDeformable(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
-    oppositeEnc2, enc2 = EncodingCoordConvLayerResAddOpBothDeformable(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
-                                               max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
+    oppositeEnc0, enc0 = EncodingCoordConvLayerBothDeformable(inputs, number_of_kernels, 5, stride, max_pool,
+                                                              max_pool_size,
+                                                              batch_norm, useLeakyReLU, LeakyReLU_alpha)
+    oppositeEnc1, enc1 = EncodingCoordConvLayerResAddOpBothDeformable(enc0, number_of_kernels * 2, kernel_size, stride,
+                                                                      max_pool,
+                                                                      max_pool_size, batch_norm, useLeakyReLU,
+                                                                      LeakyReLU_alpha)
+    oppositeEnc2, enc2 = EncodingCoordConvLayerResAddOpBothDeformable(enc1, number_of_kernels * 4, kernel_size, stride,
+                                                                      max_pool,
+                                                                      max_pool_size, batch_norm, useLeakyReLU,
+                                                                      LeakyReLU_alpha)
 
     _, enc3 = EncodingCoordConvLayerResAddOpBothDeformable(enc2, number_of_kernels * 8, kernel_size, stride, False,
-                                               max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
+                                                           max_pool_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
     assp = AtrousSpatialPyramidPoolCoordConv(enc3, number_of_kernels * 8, kernel_size, useLeakyReLU, LeakyReLU_alpha)
 
     # decoding
     # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
-    dec2 = DecodingCoordConvLayerResBothDeformable(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
-    dec1 = DecodingCoordConvLayerResBothDeformable(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
-    dec0 = DecodingCoordConvLayerResBothDeformable(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU, LeakyReLU_alpha)
+    dec2 = DecodingCoordConvLayerResBothDeformable(assp, oppositeEnc2, 2, number_of_kernels * 4, kernel_size,
+                                                   batch_norm, useLeakyReLU, LeakyReLU_alpha)
+    dec1 = DecodingCoordConvLayerResBothDeformable(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size,
+                                                   batch_norm, useLeakyReLU, LeakyReLU_alpha)
+    dec0 = DecodingCoordConvLayerResBothDeformable(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm,
+                                                   useLeakyReLU, LeakyReLU_alpha)
 
     dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
         dec0)
@@ -1430,20 +1755,21 @@ def UNet4_res_aspp_First5x5_CoordConvBothDeformable(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
     return model
+
 
 ###############3
 def UNet5_res_aspp(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                   learning_rate = 1e-3):
+                   input_size=(320, 320, 1),
+                   kernel_size=3,
+                   number_of_kernels=32,
+                   stride=1,
+                   max_pool=True,
+                   max_pool_size=2,
+                   batch_norm=True,
+                   loss_function=Loss.CROSSENTROPY,
+                   learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -1457,7 +1783,7 @@ def UNet5_res_aspp(pretrained_weights=None,
                                                max_pool_size, batch_norm)
 
     _, enc4 = EncodingLayerResAddOp(enc3, number_of_kernels * 16, kernel_size, stride, False,
-                                               max_pool_size, batch_norm)
+                                    max_pool_size, batch_norm)
     assp = AtrousSpatialPyramidPool(enc4, number_of_kernels * 16, kernel_size)
 
     # decoding
@@ -1480,19 +1806,20 @@ def UNet5_res_aspp(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet5_res_aspp.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet5_res_aspp.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet5_res_aspp_First5x5(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                   learning_rate = 1e-3):
+                            input_size=(320, 320, 1),
+                            kernel_size=3,
+                            number_of_kernels=32,
+                            stride=1,
+                            max_pool=True,
+                            max_pool_size=2,
+                            batch_norm=True,
+                            loss_function=Loss.CROSSENTROPY,
+                            learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -1506,7 +1833,7 @@ def UNet5_res_aspp_First5x5(pretrained_weights=None,
                                                max_pool_size, batch_norm)
 
     _, enc4 = EncodingLayerResAddOp(enc3, number_of_kernels * 16, kernel_size, stride, False,
-                                               max_pool_size, batch_norm)
+                                    max_pool_size, batch_norm)
     assp = AtrousSpatialPyramidPool(enc4, number_of_kernels * 16, kernel_size)
 
     # decoding
@@ -1529,19 +1856,20 @@ def UNet5_res_aspp_First5x5(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet5_res_aspp_First5x5.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet5_res_aspp_First5x5.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet4_res_aspp_AG(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                                learning_rate = 1e-3):
+                      input_size=(320, 320, 1),
+                      kernel_size=3,
+                      number_of_kernels=32,
+                      stride=1,
+                      max_pool=True,
+                      max_pool_size=2,
+                      batch_norm=True,
+                      loss_function=Loss.CROSSENTROPY,
+                      learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -1553,7 +1881,7 @@ def UNet4_res_aspp_AG(pretrained_weights=None,
                                                max_pool_size, batch_norm)
 
     _, enc3 = EncodingLayerResAddOp(enc2, number_of_kernels * 8, kernel_size, stride, False,
-                                               max_pool_size, batch_norm)
+                                    max_pool_size, batch_norm)
     assp = AtrousSpatialPyramidPool(enc3, number_of_kernels * 8, kernel_size)
 
     # decoding
@@ -1575,19 +1903,20 @@ def UNet4_res_aspp_AG(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_res_aspp_AG.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_res_aspp_AG.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet4_res_asppWF_AG(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                                learning_rate = 1e-3):
+                        input_size=(320, 320, 1),
+                        kernel_size=3,
+                        number_of_kernels=32,
+                        stride=1,
+                        max_pool=True,
+                        max_pool_size=2,
+                        batch_norm=True,
+                        loss_function=Loss.CROSSENTROPY,
+                        learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -1599,7 +1928,7 @@ def UNet4_res_asppWF_AG(pretrained_weights=None,
                                                max_pool_size, batch_norm)
 
     _, enc3 = EncodingLayerResAddOp(enc2, number_of_kernels * 8, kernel_size, stride, False,
-                                               max_pool_size, batch_norm)
+                                    max_pool_size, batch_norm)
     assp = AtrousSpatialPyramidWaterFallPool(enc3, number_of_kernels * 8, kernel_size)
 
     # decoding
@@ -1621,19 +1950,20 @@ def UNet4_res_asppWF_AG(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_res_asppWF_AG.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_res_asppWF_AG.png', show_shapes=True, show_layer_names=True)
     return model
 
+
 def UNet4_res_asppWF(pretrained_weights=None,
-                                input_size=(320, 320, 1),
-                                kernel_size=3,
-                                number_of_kernels=32,
-                                stride=1,
-                                max_pool=True,
-                                max_pool_size=2,
-                                batch_norm=True,
-                                loss_function=Loss.CROSSENTROPY,
-                                learning_rate = 1e-3):
+                     input_size=(320, 320, 1),
+                     kernel_size=3,
+                     number_of_kernels=32,
+                     stride=1,
+                     max_pool=True,
+                     max_pool_size=2,
+                     batch_norm=True,
+                     loss_function=Loss.CROSSENTROPY,
+                     learning_rate=1e-3):
     # Input
     inputs = Input(input_size)
     # encoding
@@ -1645,7 +1975,7 @@ def UNet4_res_asppWF(pretrained_weights=None,
                                                max_pool_size, batch_norm)
 
     _, enc3 = EncodingLayerResAddOp(enc2, number_of_kernels * 8, kernel_size, stride, False,
-                                               max_pool_size, batch_norm)
+                                    max_pool_size, batch_norm)
     assp = AtrousSpatialPyramidWaterFallPool(enc3, number_of_kernels * 8, kernel_size)
 
     # decoding
@@ -1667,5 +1997,58 @@ def UNet4_res_asppWF(pretrained_weights=None,
     # Load trained weights if they are passed here
     if pretrained_weights:
         model.load_weights(pretrained_weights)
-    #plot_model(model, to_file='UNet4_res_asppWF.png', show_shapes=True, show_layer_names=True)
+    # plot_model(model, to_file='UNet4_res_asppWF.png', show_shapes=True, show_layer_names=True)
+    return model
+
+
+def UNet5_res_aspp_First5x5(pretrained_weights=None,
+                            input_size=(320, 320, 1),
+                            kernel_size=3,
+                            number_of_kernels=32,
+                            stride=1,
+                            max_pool=True,
+                            max_pool_size=2,
+                            batch_norm=True,
+                            loss_function=Loss.CROSSENTROPY,
+                            useLeakyReLU=True,
+                            LeakyReLU_alpha=0.1,
+                            learning_rate=1e-3):
+    # Input
+    inputs = Input(input_size)
+    # encoding
+    oppositeEnc0, enc0 = EncodingLayer(inputs, number_of_kernels, 5, stride, max_pool, max_pool_size,
+                                       batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc1, enc1 = EncodingLayerResAddOp(enc0, number_of_kernels * 2, kernel_size, stride, max_pool,
+                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc2, enc2 = EncodingLayerResAddOp(enc1, number_of_kernels * 4, kernel_size, stride, max_pool,
+                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    oppositeEnc3, enc3 = EncodingLayerResAddOp(enc2, number_of_kernels * 8, kernel_size, stride, max_pool,
+                                               max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    _, enc4 = EncodingLayerResAddOp(enc3, number_of_kernels * 16, kernel_size, stride, False,
+                                    max_pool_size, batch_norm, useLeakyReLU, leakyReLU_alpha=LeakyReLU_alpha)
+    assp = AtrousSpatialPyramidPool(enc4, number_of_kernels * 16, kernel_size, useLeakyReLU,
+                                    leakyReLU_alpha=LeakyReLU_alpha)
+    # decoding
+    # Upsample rate needs to be same as downsampling! It will be equal to the stride and max_pool_size product in opposite (encoding layer)
+    dec3 = DecodingLayerRes(assp, oppositeEnc3, 2, number_of_kernels * 8, kernel_size, batch_norm, useLeakyReLU,
+                            leakyReLU_alpha=LeakyReLU_alpha)
+    dec2 = DecodingLayerRes(dec3, oppositeEnc2, 2, number_of_kernels * 4, kernel_size, batch_norm, useLeakyReLU,
+                            leakyReLU_alpha=LeakyReLU_alpha)
+    dec1 = DecodingLayerRes(dec2, oppositeEnc1, 2, number_of_kernels * 2, kernel_size, batch_norm, useLeakyReLU,
+                            leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = DecodingLayerRes(dec1, oppositeEnc0, 2, number_of_kernels, kernel_size, batch_norm, useLeakyReLU,
+                            leakyReLU_alpha=LeakyReLU_alpha)
+    dec0 = Conv2D(2, kernel_size=(kernel_size, kernel_size), strides=1, padding='same', kernel_initializer='he_normal')(
+        dec0)
+    if batch_norm:
+        dec0 = BatchNormalization()(dec0)
+    dec0 = Activation('relu')(dec0)
+    outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(dec0)
+    model = Model(inputs, outputs)
+    # Compile with selected loss function
+    model = CompileModel(model, loss_function, learning_rate)
+    # Load trained weights if they are passed here
+    if pretrained_weights:
+        model.load_weights(pretrained_weights)
+    # plot_model(model, to_file='UNet4_res_aspp.png', show_shapes=True, show_layer_names=True)
     return model

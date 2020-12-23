@@ -48,10 +48,14 @@ def predict_by_patches():
     output_path = r'C:\Users\Rytis\Desktop\freda holes data 2020-10-14\test//'
 
     weights = glob.glob(path_to_weights + '*.hdf5')
-    #for weight in weights:
-    for i in range(0, 1):
+    for weight in weights:
         # Choose your 'super-model'
-        model = load_model_with_weights()
+        model = UNet4_First5x5_OctaveConv2D(number_of_kernels=16,
+                                        input_size=(320, 320, 1),
+                                        loss_function=Loss.CROSSENTROPY50DICE50,
+                                        learning_rate=1e-3,
+                                        useLeakyReLU=True,
+                                        )
 
         # Test images directory
         test_images = r'C:\Users\Rytis\Desktop\freda holes data 2020-10-14\test\Data_with_gamma_correction\Image/'
