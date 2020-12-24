@@ -78,7 +78,7 @@ def aspp(input_tensor,
     dilate3 = LeakyReLU(alpha=leaky_relu_alpha)(dilate3) if leaky_relu_alpha > 0.0 else Activation('relu')(dilate3)
 
     height, width, n_ch = input_tensor.shape.as_list()[1:]
-    pool = AveragePooling2D(pool_size=(height, width))(input)
+    pool = AveragePooling2D(pool_size=(height, width))(input_tensor)
     pool = UpSampling2D((height, width), interpolation='bilinear')(pool)
 
     output = concatenate([dilate1, dilate2, dilate3, pool])
@@ -149,7 +149,7 @@ def make_upscale_layer(input_tensor,
         shortcut = Conv2D(number_of_filters, kernel_size=(1, 1), strides=1, padding='same',
                           kernel_initializer='he_normal')(conv)
     # 1 conv
-    conv = AddCoords2D()(input_tensor) if use_coord_conv else conv
+    conv = AddCoords2D()(conv) if use_coord_conv else conv
     conv = Conv2D(number_of_filters, kernel_size=(filter_size, filter_size), strides=1, padding='same',
                   kernel_initializer='he_normal')(conv)
     conv = BatchNormalization()(conv)
@@ -201,7 +201,7 @@ def unet_autoencoder(pretrained_weights=None,
         down_layers.append((opposite_connection, enc))
     # bottleneck
     _, enc_bridge = make_downscale_layer(down_layers[layers_until_bottleneck][1],
-                                         filters_in_input * downscale_times * 2, 3,
+                                         int(filters_in_input * math.pow(2, downscale_times)), 3,
                                          max_pool=False,
                                          use_residual_connections=use_residual_connections,
                                          use_aspp=use_aspp, use_se=use_se,
