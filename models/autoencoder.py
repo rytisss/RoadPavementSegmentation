@@ -178,7 +178,9 @@ def unet_autoencoder(pretrained_weights=None,
                      use_se=False,
                      use_coord_conv=False,
                      leaky_relu_alpha=0.1,
-                     filter_size_in_first_layer=5):
+                     filter_size_in_first_layer=5,
+                     loss_function=Loss.CROSSENTROPY50DICE50,
+                     learning_rate=0.001):
     down_layers = []
     # sanity check, must be at least 2 downscales
     if downscale_times < 2:
@@ -232,6 +234,8 @@ def unet_autoencoder(pretrained_weights=None,
 
     outputs = Conv2D(1, (1, 1), padding="same", activation="sigmoid", kernel_initializer='glorot_normal')(output)
     model = Model(inputs, outputs)
+    # Compile with selected loss function
+    model = CompileModel(model, loss_function, learning_rate)
     if pretrained_weights:
         model.load_weights(pretrained_weights)
         # plot_model(model, to_file='UNet4.png', show_shapes=True, show_layer_names=True)
